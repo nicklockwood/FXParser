@@ -7,7 +7,7 @@ FXParser is a parser combinator - a type of parser based around composing a comp
 
 FXParser was heavily influenced by the Parcoa parser (https://github.com/brotchie/Parcoa) which you should also look at if you are interested in parsing engines.
 
-The primary difference between FXParser and Parcoa is that FXParser uses regular expressions to define the individual parser components, rather than wokring on a character-by-character basis. This greatly reduces the size and complexity of both the FXParser engine itself and also the grammer definitions for individual parsers.
+The primary difference between FXParser and Parcoa is that FXParser uses regular expressions to define the individual parser components, rather than working on a character-by-character basis. This greatly reduces the size and complexity of both the FXParser engine itself and also the grammer definitions for individual parsers.
 
 
 Supported OS & SDK Versions
@@ -31,7 +31,7 @@ If you wish to convert your whole project to ARC, comment out the #error line in
 Installation
 ---------------
 
-To use FXParser, just drag the class files into your project. FXParser can be subclassed, but normally this is not neccesary - instead just create instances using the standard constructors to specify your custom rules.
+To use FXParser, just drag the class files into your project. FXParser can be subclassed, but normally this is not necessary - instead just create instances using the standard constructors to specify your custom rules.
 
 
 Usage
@@ -96,11 +96,11 @@ This method creates a parser that will match the specified FXParserStringPredica
     
     NSRange (^FXParserStringPredicate)(NSString *input, NSRange range);
     
-The predicate block takes an input string and a range for it to parse, and returns an NSRange object that is used to indicate both success/failure and the amount of text consumed. Use of NSRange as the retunr value may seem cumbersome, but it's quite easy to use with the built-in NSString matching functions. For a successful match, the range.location should always match up with the range supplied to the predicate. If it does, the match is assumed to be successful even if the length is zero (it is possible to have rules that match zero characters). Note that it is not acceptable to return a match that does not start at the beginning of the specified range - if you wish to ignore leading white space in your predicate matching rules that's fine, but make sure that any ignored white space is still included in the returned range value.
+The predicate block takes an input string and a range for it to parse, and returns an NSRange object that is used to indicate both success/failure and the amount of text consumed. Use of NSRange as the return value may seem cumbersome, but it's quite easy to use with the built-in NSString matching functions. For a successful match, the range.location should always match up with the range supplied to the predicate. If it does, the match is assumed to be successful even if the length is zero (it is possible to have rules that match zero characters). An unsuccessful match should return a range with a location value of NSNotFound (this is the default behaviour of NSString's rangeOfString: method). Note that it is not acceptable to return a successful match that does not start at the beginning of the specified range - if you wish to ignore leading white space in your predicate matching rules that's fine, but make sure that any ignored white space is still included in the returned range value.
 
     + (instancetype)string:(NSString *)string;
 
-This method creates a parser that will match the specified string. The string can be a single character or a whole sentence. The parser requires the string to match exactly, including case and white space. If you want to be more flexible, use regexp matcher instead.
+This method creates a parser that will match the specified string. The string can be a single character or a whole sentence. The parser requires the string to match exactly, including case and white space. If you want to be more flexible, use a regexp matcher instead.
 
     + (instancetype)regexp:(NSString *)pattern;
     
@@ -108,15 +108,15 @@ This method creates a parser that will match the specified regular expression.
 
     + (instancetype)regexp:(NSString *)pattern replacement:(NSString *)replacement;
     
-This method creates a parser that will match the sepcified regular expression, but can replace the captured text using a replacement template string, where $0-n can be used to represent the captured subexpressions from the regexp.
+This method creates a parser that will match the sepcified regular expression, but can replace the captured text using a replacement template string, where $0-n can be used to represent the captured subexpressions from the regexp. (This replacement is technically a type of value transform, but it makes sense to include it in the constructor so you do not have to duplicate the regex pattern in a separate call).
 
     - (instancetype)parserWithDescription:(NSString *)description;
     
-This method can be used to override the description of an existing parser. So for example for a parser that matches the regular expression \d you might want to change the description from the default ""a string matching the pattern \d" to "a numeric digit". Note that FXParser objects are (mostly) immutable, so rather than modifying the parser, this will create and return a new parser object that matches the behaviour of the original but uses the new description.
+This method can be used to override the description of an existing parser. So for example, for a parser that matches the regular expression \d you might want to change the description from the default "a string matching the pattern \d" to "a numeric digit". Note that FXParser objects are (mostly) immutable, so rather than modifying the parser, this will create and return a new parser object that matches the behaviour of the original but uses the new description.
     
     + (instancetype)forwardDeclaration;
     
-Sometimes it is neccesary to create recursive rules, which can be difficult if you end up needing to refer to a parser before you've defined it. The `forwardDeclaration` constructor creates a "blank" parser that you can use within another parser definition on the understanding that you will supply the implementation using the `setImplementation:` method before you attempt to parse anything. Attempting to parse any text before the implementation has been set will throw an exception.
+Sometimes it is necessary to create recursive rules, which can be difficult if you end up needing to refer to a parser before you've defined it. The `forwardDeclaration` constructor creates a "blank" parser that you can use within another parser definition on the understanding that you will supply the implementation using the `setImplementation:` method before you attempt to parse anything. Attempting to parse any text before the implementation has been set will throw an exception.
     
     - (void)setImplementation:(FXParser *)implementation;
     
@@ -142,11 +142,11 @@ This method takes an array of parsers and assembles them to form a single  parse
     
     + (instancetype)oneOf:(NSArray *)parsers;
     
-This method method takes an array of parsers and assembles them to form a single  parser. The resultant parser will succeed if *any* of supplied parsers match the input. If more than one of the parsers matches, the longest successful match will be used.
+This method method takes an array of parsers and assembles them to form a single  parser. The resultant parser will succeed if *any* of supplied parsers match the input. If more than one of the parsers matches, the one yielding the longest successful match will be used.
     
     - (instancetype)optional;
     
-This method returns a new parser that will return success regardless of whether the original parser matches or not. This is useful for matching irrelevant content such as white space between tokens.
+This method returns a new parser that will return success regardless of whether the original parser matches or not. This is useful for matching irrelevant content such as optional white space between tokens.
     
     - (instancetype)oneOrMore;
     
@@ -154,19 +154,19 @@ This method returns a new parser that will match a sequence of one or more of th
     
     - (instancetype)separatedBy:(FXParser *)parser;
     
-This method returns a new parser that will match a sequence of one or more of the original parser's required string separated by the supplied parser's required string. For example if the original parser matched a number, and the new parser argument matches a comma, the resultant parser would match a comma-delimited list of numbers.
+This method returns a new parser that will match a sequence of one or more instances of the original parser's expected string, separated by the supplied parser's expected string. For example if the original parser matched a number, and the new parser argument matches a comma, the resultant parser would match a comma-delimited list of numbers.
     
     - (instancetype)surroundedBy:(FXParser *)parser;
     
-This is a convenience method that returns a new parser that matches the original string preceeded and followed by the supplied parser's required string. This might be used to match a string in quotes for example, or a token surrounded by white space. It is equivalent to `[FXParser sequence:@[parser, self, parser]]`.
+This is a convenience method that returns a new parser that matches the original string preceeded and followed by the supplied parser's expected string. This might be used to match a string in quotes for example, or a token surrounded by white space. It is equivalent to `[FXParser sequence:@[parser, self, parser]]`.
     
     - (instancetype)or:(FXParser *)parser;
     
-This method returns a new parser that matches either the original parser's string or the supplied parser's string. It is equivalent to creating a new parser with `[FXParser oneOf:@[self, parser]].
+This method returns a new parser that matches either the original parser's expected string or the supplied parser's expected string. It is equivalent to creating a new parser using `[FXParser oneOf:@[self, parser]].
     
     - (instancetype)then:(FXParser *)parser;
 
-This method returns a new parser that matches the original parser's string followed by the supplied parser's string. It is equivalent to creating a new parser with `[FXParser sequence:@[self, parser]]`.
+This method returns a new parser that matches the original parser's expected string followed by the supplied parser's expected string. It is equivalent to creating a new parser with `[FXParser sequence:@[self, parser]]`.
 
 
 Value transformers
@@ -184,7 +184,7 @@ The predicate block takes an input value and returns an output value. How you ge
     
     - (instancetype)withValueForKeyPath:(NSString *)keyPath;
     
-Sometimes you want actually want a child property of a captured value, or the result of calling a method on the object (e.g. [string lowerCaseString]) - you can use the `withValueForKeyPath:` transform method for that. Specify a keypath that will be called on the value object and used to return the replacement value. 
+Sometimes you want actually want a sub-property of a captured value, or the result of calling a method on the object (e.g. [string lowerCaseString]) - you can use the `withValueForKeyPath:` transform method for that. Specify a keypath that will be called on the value object and used to return the replacement value. 
     
     - (instancetype)withValue:(id)value;
     
@@ -192,7 +192,7 @@ Sometimes you just want to replace the captured value with a specific replacemen
     
     - (instancetype)discard;
     
-Occasionally you will need to match some data that you are not interested in keeping (e.g. white space). Use the `discard` transform to remove it from the result value. 
+Occasionally you will need to match some data that you are not interested in keeping (e.g. white space). Use the `discard` transform to remove it from the results altogether.
     
     - (instancetype)array;
     
@@ -226,11 +226,11 @@ The remaining range of the input string that was not consumed by the parsing pro
     
     @property (nonatomic, readonly) NSArray *children;
     
-This is an array (or tree, since each child may have children of its own) of sub-results created by nested FXParsers within the main parser. If the value parsed was composed of smaller tokens or structures, you can retrieve information about them by inspecting this value. For example, you can use the `remaining` values of the children to calculate the positions of the child values within the original string. In the event of an unsuccessful parsing, this value will contain all of the successfully matched sub-results up until the point of failure, which may be useful for error recovery.
+This is an array (or tree, since each child may have children of its own) of sub-results created by nested FXParsers within the main parser. If the value that was parsed was composed of smaller tokens or structures, you can retrieve information about them by inspecting this value. For example, you can use the `remaining` values of the children to calculate the positions of the child values within the original string. In the event of an unsuccessful parsing, this value will contain all of the successfully matched sub-results up until the point of failure, which may be useful for error recovery.
     
     @property (nonatomic, readonly) NSString *expected;
     
-For a successful parsing this value will be nil. If parsing fails, this value will contain a human readable (if terse) description of the expected input at the point of failure.
+If parsing was successful, this value will be nil. If parsing fails, this value should contain a human-readable (if somewhat terse) description of the expected input at the point of failure.
     
 You can construct an FXParserResult using one of the following methods:
 
@@ -248,7 +248,7 @@ This is used to generate an FXParserResult that represents a successful parsing 
     
     + (instancetype)failureWithChildren:(NSArray *)children expected:(NSString *)description remaining:(NSRange)remaining;
     
-This method is used to generate an FXParserResult that represents a failed parsing operation. Any successful sub-parsing results (e.g. if the parser found 4 strings but was expecting 5) should be passed as the children parameter. For results that do not have any children, pass nil. The expected string is a description of the value that was expected. In most cases this is just the `[parser description]` value. The remaining value will be the range of the unconsumed part of the string, which should match the input range in most cases if the children value is nil, or should match the last child's `remaining` property if not.
+This method is used to generate an FXParserResult that represents a failed parsing operation. Any successful sub-parsing results (e.g. if the parser found 4 strings but was expecting 5) should be passed as the children parameter. For results that do not have any children, pass nil. The expected string is a description of the next value that was expected at the point when parsing failed. In most cases this is just the `[parser description]` value, but it might be the description of a child parser in the case of partial success. The remaining value will be the range of the unconsumed part of the string, which should match the input range in most cases if the children value is nil, or should match the last child's `remaining` property if not.
 
 
 Extending FXParser
