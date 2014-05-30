@@ -1,7 +1,7 @@
 //
 //  FXParser.h
 //
-//  Version 1.0
+//  Version 1.0.1
 //
 //  Created by Nick Lockwood on 15/01/2013.
 //  Copyright (c) 2013 Charcoal Design
@@ -32,6 +32,10 @@
 
 
 #import <Foundation/Foundation.h>
+
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wobjc-missing-property-synthesis"
 
 
 @class  FXParserResult;
@@ -107,3 +111,7 @@ typedef id (^FXParserValueTransform)(id value);
 - (instancetype)join:(NSString *)glue; //joins an array of values
 
 @end
+
+
+#pragma GCC diagnostic pop
+

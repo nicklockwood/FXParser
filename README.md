@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/nicklockwood/FXParser.svg)](https://travis-ci.org/nicklockwood/FXParser)
+
+
 Purpose
 --------------
 
@@ -7,13 +10,13 @@ FXParser is a parser combinator - a type of parser based around composing a comp
 
 FXParser was heavily influenced by the Parcoa parser (https://github.com/brotchie/Parcoa) which you should also look at if you are interested in parsing engines.
 
-The primary difference between FXParser and Parcoa is that FXParser uses regular expressions to define the individual parser components, rather than working on a character-by-character basis. This greatly reduces the size and complexity of both the FXParser engine itself and also the grammer definitions for individual parsers.
+The primary difference between FXParser and Parcoa is that FXParser uses regular expressions to define the individual parser components, rather than working on a character-by-character basis. This greatly reduces the size and complexity of both the FXParser engine itself and also the grammar definitions for individual parsers.
 
 
 Supported OS & SDK Versions
 -----------------------------
 
-* Supported build target - iOS 6.0 / Mac OS 10.8 (Xcode 4.5.2, Apple LLVM compiler 4.1)
+* Supported build target - iOS 7.1 / Mac OS 10.9 (Xcode 5.1, Apple LLVM compiler 5.1)
 * Earliest supported deployment target - iOS 5.0 / Mac OS 10.7
 * Earliest compatible deployment target - iOS 4.3 / Mac OS 10.6
 
@@ -45,7 +48,7 @@ To use FXParser, create an FXParser instance that matches a particular set of cr
     //create a parser that matches the word 'cat'
     FXParser *cat = [FXParser string:@"cat"];
     
-    //create a composite  parser that matches either
+    //create a composite parser that matches either
     FXParser *pet = [dog or:cat];
     
     //parse a string
@@ -70,7 +73,7 @@ FXParser
 
 FXParser's methods break down into three types, which have been split into separate Categories to make things clearer:
 
-1. Core functionality - this includes all the standard parser consturctors and methods for parsing strings.
+1. Core functionality - this includes all the standard parser constructors and methods for parsing strings.
     
 2. Combinators - these are methods for combining parsers to make more complex rules.
     
@@ -108,7 +111,7 @@ This method creates a parser that will match the specified regular expression.
 
     + (instancetype)regexp:(NSString *)pattern replacement:(NSString *)replacement;
     
-This method creates a parser that will match the sepcified regular expression, but can replace the captured text using a replacement template string, where $0-n can be used to represent the captured subexpressions from the regexp. (This replacement is technically a type of value transform, but it makes sense to include it in the constructor so you do not have to duplicate the regex pattern in a separate call).
+This method creates a parser that will match the specified regular expression, but can replace the captured text using a replacement template string, where $0-n can be used to represent the captured subexpressions from the regexp. (This replacement is technically a type of value transform, but it makes sense to include it in the constructor so you do not have to duplicate the regexp pattern in a separate call).
 
     - (instancetype)parserWithDescription:(NSString *)description;
     
@@ -222,7 +225,7 @@ The value returned after parsing the input. This can be either a single value or
     
     @property (nonatomic, readonly) NSRange remaining;
     
-The remaining range of the input string that was not consumed by the parsing process. Note that for an FXParser to succeed, it does not neccesarily have to have consumed all of the available input. If you wish to treat leftover input as an error, you can either enforce this as a custom rule implemented using a custom FXParserBlock, or just check the result to see if the remaining.length > 0. 
+The remaining range of the input string that was not consumed by the parsing process. Note that for an FXParser to succeed, it does not necessarily have to have consumed all of the available input. If you wish to treat leftover input as an error, you can either enforce this as a custom rule implemented using a custom FXParserBlock, or just check the result to see if the remaining.length > 0. 
     
     @property (nonatomic, readonly) NSArray *children;
     
@@ -283,6 +286,18 @@ You may be able to subclass FXParser and override all the methods that use FXPar
 
 A better approach is probably to post-process the FXParserResult returned by your parser. For example, by iterating over a result and all of its children and comparing their `remaining` values to the original input range. Given the range of the original input string it should then be possible to create any additional data about the input that you require. If you have a usage scenario that this doesn't cover, file a feature request on the FXParser github page.
 
-Q. I need to implement an operator precedence system so that I can parse arithemetic logic.
+Q. I need to implement an operator precedence system so that I can parse arithmetic logic.
 
 A. The solution here would be to subclass FXParser and add a precedence property and a method to set it. You will also need to override the `oneOf:` constructor and modify its precedence logic - which is currently based on the length of the string consumed - to make use of your new property instead. An official operator precedence system will most likely be added in a future release of FXParser.
+
+
+Release Notes
+---------------
+
+Version 1.0.1
+
+- Now conforms to -Weverything warning level
+
+Version 1.0
+
+- Initial release

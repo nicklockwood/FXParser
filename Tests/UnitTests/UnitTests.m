@@ -1,16 +1,21 @@
 //
-//  ParserTests.m
-//  UnitTests
+//  FastCoderTests.m
 //
-//  Created by Nick Lockwood on 15/01/2013.
-//
+//  Created by Nick Lockwood on 12/01/2012.
+//  Copyright (c) 2012 Charcoal Design. All rights reserved.
 //
 
-#import "ParserTests.h"
+
+#import <XCTest/XCTest.h>
 #import "FXParser.h"
 
 
-@implementation ParserTests
+@interface UnitTests : XCTestCase
+
+@end
+
+
+@implementation UnitTests
 
 - (void)testCharacter
 {
@@ -18,10 +23,10 @@
     FXParser *parser = [FXParser regexp:@"\\d"];
     
     //test success
-    NSAssert([parser parse:@"5"].success, @"Something went wrong");
+    XCTAssertTrue([parser parse:@"5"].success, @"Something went wrong");
     
     //test failure
-    NSAssert(![parser parse:@"A"].success, @"Something went wrong");
+    XCTAssertFalse([parser parse:@"A"].success, @"Something went wrong");
 }
 
 - (void)testPrimitives
@@ -30,12 +35,12 @@
     FXParser *parser = [FXParser string:@"foo"];
     
     //test success
-    NSAssert([parser parse:@"foo"].success, @"Something went wrong");
-    NSAssert([parser parse:@"foobar"].success, @"Something went wrong");
+    XCTAssertTrue([parser parse:@"foo"].success, @"Something went wrong");
+    XCTAssertTrue([parser parse:@"foobar"].success, @"Something went wrong");
     
     //test failure
-    NSAssert(![parser parse:@"bar"].success, @"Something went wrong");
-    NSAssert(![parser parse:@"barfoo"].success, @"Something went wrong");
+    XCTAssertFalse([parser parse:@"bar"].success, @"Something went wrong");
+    XCTAssertFalse([parser parse:@"barfoo"].success, @"Something went wrong");
 }
 
 - (void)testChoice
@@ -44,12 +49,12 @@
     FXParser *parser = [[FXParser string:@"foo"] or:[FXParser string:@"bar"]];
     
     //test success
-    NSAssert([parser parse:@"foo"].success, @"Something went wrong");
-    NSAssert([parser parse:@"bar"].success, @"Something went wrong");
-    NSAssert([parser parse:@"foobar"].success, @"Something went wrong");
+    XCTAssertTrue([parser parse:@"foo"].success, @"Something went wrong");
+    XCTAssertTrue([parser parse:@"bar"].success, @"Something went wrong");
+    XCTAssertTrue([parser parse:@"foobar"].success, @"Something went wrong");
     
     //test failure
-    NSAssert(![parser parse:@"boo"].success, @"Something went wrong");
+    XCTAssertFalse([parser parse:@"boo"].success, @"Something went wrong");
 }
 
 - (void)testSequence
@@ -58,19 +63,19 @@
     FXParser *parser = [[FXParser string:@"foo"] then:[FXParser string:@"bar"]];
     
     //test success
-    NSAssert([parser parse:@"foobar"].success, @"Something went wrong");
-    NSAssert([parser parse:@"foobarfoo"].success, @"Something went wrong");
+    XCTAssertTrue([parser parse:@"foobar"].success, @"Something went wrong");
+    XCTAssertTrue([parser parse:@"foobarfoo"].success, @"Something went wrong");
     
     //test failure
-    NSAssert(![parser parse:@"foo"].success, @"Something went wrong");
-    NSAssert(![parser parse:@"bar"].success, @"Something went wrong");
-    NSAssert(![parser parse:@"barfoo"].success, @"Something went wrong");
+    XCTAssertFalse([parser parse:@"foo"].success, @"Something went wrong");
+    XCTAssertFalse([parser parse:@"bar"].success, @"Something went wrong");
+    XCTAssertFalse([parser parse:@"barfoo"].success, @"Something went wrong");
 }
 
 - (void)testReplacement
 {
     FXParser *parser = [FXParser regexp:@"D(.)g" replacement:@"C$1g"];
-    NSAssert([[parser parse:@"Dog"].value isEqualToString:@"Cog"], @"Something went wrong");
+    XCTAssertEqualObjects([parser parse:@"Dog"].value, @"Cog", @"Something went wrong");
 }
 
 - (void)testJSON
@@ -108,40 +113,46 @@
     json.implementation = [FXParser oneOf:@[number, boolean, null, string, array, object]];
     
     //test primitive matching
-    NSAssert([json parse:@" 5"].success, @"Something went wrong");
-    NSAssert([json parse:  @"10.5 "].success, @"Something went wrong");
-    NSAssert([json parse:@"null\n "].success, @"Something went wrong");
-    NSAssert([json parse:@" true"].success, @"Something went wrong");
-    NSAssert([json parse:@"false  "].success, @"Something went wrong");
+    XCTAssertTrue([json parse:@" 5"].success, @"Something went wrong");
+    XCTAssertTrue([json parse:  @"10.5 "].success, @"Something went wrong");
+    XCTAssertTrue([json parse:@"null\n "].success, @"Something went wrong");
+    XCTAssertTrue([json parse:@" true"].success, @"Something went wrong");
+    XCTAssertTrue([json parse:@"false  "].success, @"Something went wrong");
     
     //test string matching
     FXParserResult *result = [json parse:@" \"foo\"   "];
-    NSAssert(result.success && [result.value isEqualToString:@"foo"], @"Something went wrong");
-
+    XCTAssertTrue(result.success, @"Something went wrong");
+    XCTAssertEqualObjects(result.value, @"foo", @"Something went wrong");
+    
     //test array
     result = [json parse:@"[1  ,2 ,  \n3]"];
-    NSAssert((result.success && [result.value isEqualTo:@[@1,@2,@3]]), @"Something went wrong");
+    XCTAssertTrue(result.success, @"Something went wrong");
+    XCTAssertEqualObjects(result.value, (@[@1,@2,@3]), @"Something went wrong");
     
     //test empty array
     result = [json parse:@"[] "];
-    NSAssert((result.success && [result.value isEqualTo:@[]]), @"Something went wrong");
+    XCTAssertTrue(result.success, @"Something went wrong");
+    XCTAssertEqualObjects(result.value, (@[]), @"Something went wrong");
     
     //test array of empty arrays
     result = [json parse:@"[[],[]]"];
-    NSAssert((result.success && [result.value isEqualTo:@[@[],@[]]]), @"Something went wrong");
+    XCTAssertTrue(result.success, @"Something went wrong");
+    XCTAssertEqualObjects(result.value, (@[@[],@[]]), @"Something went wrong");
     
     //test dictionary
     result = [json parse:@"{ \n\"foo\"  :\n1, \"bar\" :2}   "];
-    NSAssert((result.success && [result.value isEqualTo:@{@"foo":@1, @"bar":@2}]), @"Something went wrong");
+    XCTAssertTrue(result.success, @"Something went wrong");
+    XCTAssertEqualObjects(result.value, (@{@"foo":@1, @"bar":@2}), @"Something went wrong");
     
     //test empty dictionary
     result = [json parse:@"{ }"];
-    NSAssert((result.success && [result.value isEqualTo:@{}]), @"Something went wrong");
+    XCTAssertTrue(result.success, @"Something went wrong");
+    XCTAssertEqualObjects(result.value, (@{}), @"Something went wrong");
     
     //test failure
-    NSAssert(![json parse:@"foo"].success, @"Something went wrong");
-    NSAssert(![json parse:@"bar"].success, @"Something went wrong");
-    NSAssert(![json parse:@"barfoo"].success, @"Something went wrong");
+    XCTAssertFalse([json parse:@"foo"].success, @"Something went wrong");
+    XCTAssertFalse([json parse:@"bar"].success, @"Something went wrong");
+    XCTAssertFalse([json parse:@"barfoo"].success, @"Something went wrong");
 }
 
 @end

@@ -1,7 +1,7 @@
 //
 //  FXParser.m
 //
-//  Version 1.0
+//  Version 1.0.1
 //
 //  Created by Nick Lockwood on 15/01/2013.
 //  Copyright (c) 2013 Charcoal Design
@@ -32,6 +32,7 @@
 
 
 #import "FXParser.h"
+#pragma GCC diagnostic ignored "-Wobjc-missing-property-synthesis"
 
 
 #import <Availability.h>
@@ -85,10 +86,10 @@ NSString *const FXParserException = @"FXParserException";
 
 - (id)value
 {
-    if (!_value && _children)
+    if (!_value && self.children)
     {
         NSMutableArray *values = [NSMutableArray array];
-        for (FXParserResult *result in _children)
+        for (FXParserResult *result in self.children)
         {
             if (result.value) [values addObject:result.value];
         }
@@ -99,15 +100,15 @@ NSString *const FXParserException = @"FXParserException";
 
 - (NSString *)description
 {
-    if (_success)
+    if (self.success)
     {
         return [NSString stringWithFormat:@"success; %i characters remaining; value: %@",
-                (int)_remaining.length, self.value];
+                (int)self.remaining.length, self.value];
     }
     else
     {
         return [NSString stringWithFormat:@"failed; expected: %@; %i characters remaining; value: %@",
-                _expected, (int)_remaining.length, self.value];
+                self.expected, (int)self.remaining.length, self.value];
     }
 }
 
@@ -126,7 +127,7 @@ NSString *const FXParserException = @"FXParserException";
 
 + (instancetype)parserWithBlock:(FXParserBlock)block description:(NSString *)description
 {
-    FXParser *parser = [[[self class] alloc] init];
+    FXParser *parser = [[self alloc] init];
     parser.block = block;
     parser.description = description;
     return parser;
@@ -150,7 +151,7 @@ NSString *const FXParserException = @"FXParserException";
 {
     return [self stringMatchingPredicate:^NSRange(NSString *input, NSRange range) {
         
-        return [input rangeOfString:pattern options:NSRegularExpressionSearch|NSAnchoredSearch range:range];
+        return [input rangeOfString:pattern options:(NSStringCompareOptions)(NSRegularExpressionSearch|NSAnchoredSearch) range:range];
         
     } description:[NSString stringWithFormat:@"a string matching the pattern %@", pattern]];
 }
@@ -159,11 +160,11 @@ NSString *const FXParserException = @"FXParserException";
 {
     return [[self regexp:pattern] withTransform:^id(id value) {
         
-        NSRegularExpression *expression = [[NSRegularExpression alloc] initWithPattern:pattern options:0 error:NULL];
-        return [expression stringByReplacingMatchesInString:[value description]
-                                                    options:NSMatchingAnchored
-                                                      range:NSMakeRange(0, [value length])
-                                               withTemplate:replacement];
+        NSRegularExpression *exp = [[NSRegularExpression alloc] initWithPattern:pattern options:(NSRegularExpressionOptions)0 error:NULL];
+        return [exp stringByReplacingMatchesInString:[value description]
+                                             options:NSMatchingAnchored
+                                               range:NSMakeRange(0, [value length])
+                                        withTemplate:replacement];
     }];
 }
 
@@ -178,32 +179,32 @@ NSString *const FXParserException = @"FXParserException";
 
 - (instancetype)parserWithDescription:(NSString *)description
 {
-    return [[self class] parserWithBlock:_block description:description];
+    return [[self class] parserWithBlock:self.block description:description];
 }
 
 + (instancetype)forwardDeclaration
 {
-    return [[[self class] alloc] init];
+    return [[self alloc] init];
 }
 
 - (void)setImplementation:(FXParser *)implementation
 {
-    if (_block)
+    if (self.block)
     {
         [NSException raise:@"Implementation has already been set" format:nil];
     }
-    _block = implementation.block;
-    _description = implementation.description;
+    self.block = implementation.block;
+    self.description = implementation.description;
 }
 
 - (FXParserResult *)parse:(NSString *)input range:(NSRange)range
 {
-    return _block(input, range);
+    return self.block(input, range);
 }
 
 - (FXParserResult *)parse:(NSString *)input
 {
-    if (!_block)
+    if (!self.block)
     {
         [NSException raise:@"No implementation has been set" format:nil];
     }
@@ -380,17 +381,17 @@ NSString *const FXParserException = @"FXParserException";
     }];
 }
 
-- (instancetype)withValue:(id)_value
+- (instancetype)withValue:(id)value
 {
-    return [self withTransform:^id(id value) {
+    return [self withTransform:^id(__unused id discardedValue) {
         
-        return _value;
+        return value;
     }];
 }
 
 - (instancetype)discard
 {
-    return [self withTransform:^id(id value) {
+    return [self withTransform:^id(__unused id discardedValue) {
         
         return nil;
     }];
@@ -414,19 +415,20 @@ NSString *const FXParserException = @"FXParserException";
 
 - (instancetype)dictionary
 {
-    return [self withTransform:^id(id value) {
+    return [self withTransform:^id(NSArray *value) {
         
         if (value && ![value isKindOfClass:[NSArray class]])
         {
             [NSException raise:FXParserException format:@"attempted to convert %@ to a dictionary", [value class]];
         }
+        
         if ([value count] % 2 != 0)
         {
             [NSException raise:FXParserException format:@"array has odd number of elements"];
         }
         
         NSMutableDictionary *results = [NSMutableDictionary dictionary];
-        for (int i = 0; i < [value count]; i += 2)
+        for (NSUInteger i = 0; i < [value count]; i += 2)
         {
             results[value[i]] = value[i + 1];
         }
