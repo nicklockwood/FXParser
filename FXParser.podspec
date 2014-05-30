@@ -2,7 +2,7 @@ Pod::Spec.new do |s|
   s.name     = 'FXParser'
   s.version  = '1.0.1'
   s.license  = 'zlib'
-  s.summary  = 'FXParser is a very simple text parsing engine for iOS and Mac OS designed to simplify the consumption of simple text-based languages and data formats, e.g. JSON.'
+  s.summary  = 'FXParser is a text parsing engine for iOS and Mac OS to simplify the consumption of text-based languages and data formats, e.g. JSON.'
   s.homepage = 'https://github.com/nicklockwood/FXParser'
   s.social_media_url = 'https://twitter.com/nicklockwood'
   s.authors  = 'Nick Lockwood'

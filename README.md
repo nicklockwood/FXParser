@@ -4,7 +4,7 @@
 Purpose
 --------------
 
-FXParser is a very simple text parsing engine for iOS and Mac OS designed to simplify the consumption of simple text-based languages and data formats, e.g. JSON.
+FXParser is a text parsing engine for iOS and Mac OS designed to simplify the consumption of text-based languages and data formats, e.g. JSON.
 
 FXParser is a parser combinator - a type of parser based around composing a complex parser object from many simpler ones. This approach is much simpler than traditional parsers, and avoids the need for a separate lexing/tokenizing stage.
 
