@@ -361,7 +361,7 @@ Version 1.1
 - Renamed some methods for clarity and to conform better with Objective-C conventions
 - Added new grammar specification syntax and built-in parser (implemented using FXParser)
 - Improved description methods to provide more detail about parsers
-- Added BASIC interpreter example
+- Added a very simple BASIC interpreter example
 
 Version 1.0.1
 

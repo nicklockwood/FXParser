@@ -1,6 +1,6 @@
 FXParser
 
-Version 1.0.1, May 30th, 2014
+Version 1.1, June 2nd, 2014
 
 Copyright (C) 2013 Charcoal Design
 
