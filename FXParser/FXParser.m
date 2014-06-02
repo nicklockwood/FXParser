@@ -1,7 +1,7 @@
 //
 //  FXParser.m
 //
-//  Version 1.0.1
+//  Version 1.1
 //
 //  Created by Nick Lockwood on 15/01/2013.
 //  Copyright (c) 2013 Charcoal Design
@@ -33,6 +33,7 @@
 
 #import "FXParser.h"
 #pragma GCC diagnostic ignored "-Wobjc-missing-property-synthesis"
+#pragma GCC diagnostic ignored "-Wgnu"
 
 
 #import <Availability.h>
@@ -158,14 +159,15 @@ NSString *const FXParserException = @"FXParserException";
 
 + (instancetype)regexp:(NSString *)pattern replacement:(NSString *)replacement
 {
-    return [[self regexp:pattern] withTransform:^id(id value) {
+    return [[[self regexp:pattern] withTransformer:^id(id value) {
         
         NSRegularExpression *exp = [[NSRegularExpression alloc] initWithPattern:pattern options:(NSRegularExpressionOptions)0 error:NULL];
         return [exp stringByReplacingMatchesInString:[value description]
                                              options:NSMatchingAnchored
                                                range:NSMakeRange(0, [value length])
                                         withTemplate:replacement];
-    }];
+        
+    }] withDescription:[NSString stringWithFormat:@"a string matching the pattern %@ with replacement %@", pattern, replacement]];
 }
 
 + (instancetype)string:(NSString *)string
@@ -177,14 +179,16 @@ NSString *const FXParserException = @"FXParserException";
     } description:string];
 }
 
-- (instancetype)parserWithDescription:(NSString *)description
+- (instancetype)withDescription:(NSString *)description
 {
     return [[self class] parserWithBlock:self.block description:description];
 }
 
 + (instancetype)forwardDeclaration
 {
-    return [[self alloc] init];
+    FXParser *parser = [[self alloc] init];
+    parser.description = @"<forward declaration>";
+    return parser;
 }
 
 - (void)setImplementation:(FXParser *)implementation
@@ -199,15 +203,15 @@ NSString *const FXParserException = @"FXParserException";
 
 - (FXParserResult *)parse:(NSString *)input range:(NSRange)range
 {
+    if (!self.block)
+    {
+        [NSException raise:@"No implementation has been set" format:nil];
+    }
     return self.block(input, range);
 }
 
 - (FXParserResult *)parse:(NSString *)input
 {
-    if (!self.block)
-    {
-        [NSException raise:@"No implementation has been set" format:nil];
-    }
     return [self parse:input range:NSMakeRange(0, [input length])];
 }
 
@@ -241,7 +245,7 @@ NSString *const FXParserException = @"FXParserException";
         }
         return [FXParserResult successWithChildren:children remaining:_range];
         
-    } description:[parsers count]? [parsers[0] description]: @""];
+    } description:[[parsers valueForKey:@"description"] componentsJoinedByString:@" then "] ?: @""];
 }
 
 + (instancetype)oneOf:(NSArray *)parsers
@@ -301,10 +305,8 @@ NSString *const FXParserException = @"FXParserException";
     } description:[NSString stringWithFormat:@"an optional %@", self]];
 }
 
-- (instancetype)oneOrMore
+- (instancetype)zeroOrMoreTimes
 {
-    NSString *description = [NSString stringWithFormat:@"one or more instances of %@", self];
-    
     return [FXParser parserWithBlock:^FXParserResult *(NSString *input, NSRange range) {
         
         FXParserResult *result = nil;
@@ -322,21 +324,58 @@ NSString *const FXParserException = @"FXParserException";
             }
             _range = result.remaining;
         }
-        if ([children count])
+        return [FXParserResult successWithChildren:children remaining:_range];
+        
+    } description:[NSString stringWithFormat:@"zero or more instances of %@", self]];
+}
+
+- (instancetype)oneOrMoreTimes
+{
+    NSString *description = [NSString stringWithFormat:@"one or more instances of %@", self];
+    return [FXParser parserWithBlock:^FXParserResult *(NSString *input, NSRange range) {
+        
+        FXParserResult *result = [[self zeroOrMoreTimes] parse:input range:range];
+        if (result.success)
         {
-            return [FXParserResult successWithChildren:children remaining:_range];
+            if ([result.children count])
+            {
+                return result;
+            }
+            else
+            {
+                return [FXParserResult failureWithChildren:nil expected:description remaining:result.remaining];
+            }
         }
-        else
+        return [FXParserResult successWithValue:nil remaining:range];
+        
+    } description:description];
+}
+
+- (instancetype)twoOrMoreTimes
+{
+    NSString *description = [NSString stringWithFormat:@"two or more instances of %@", self];
+    return [FXParser parserWithBlock:^FXParserResult *(NSString *input, NSRange range) {
+        
+        FXParserResult *result = [[self zeroOrMoreTimes] parse:input range:range];
+        if (result.success)
         {
-            return [FXParserResult failureWithChildren:nil expected:description remaining:_range];
+            if ([result.children count] >= 2)
+            {
+                return result;
+            }
+            else
+            {
+                return [FXParserResult failureWithChildren:nil expected:description remaining:result.remaining];
+            }
         }
-    
+        return [FXParserResult successWithValue:nil remaining:range];
+        
     } description:description];
 }
 
 - (instancetype)separatedBy:(FXParser *)parser
 {
-    return [self then:[[[parser then:self] oneOrMore] optional]];
+    return [self then:[[[parser then:self] oneOrMoreTimes] optional]];
 }
 
 - (instancetype)surroundedBy:(FXParser *)parser
@@ -357,49 +396,52 @@ NSString *const FXParserException = @"FXParserException";
 @end
 
 
-@implementation FXParser (ValueTransforms)
+@implementation FXParser (ValueTransformers)
 
-- (instancetype)withTransform:(FXParserValueTransform)transform
+- (instancetype)withTransformer:(FXParserValueTransformer)transformer
 {
     return [FXParser parserWithBlock:^FXParserResult *(NSString *input, NSRange range) {
         
         FXParserResult *result = [self parse:input range:range];
         if (result.success)
         {
-            return [FXParserResult successWithValue:transform(result.value) remaining:result.remaining];
+            return [FXParserResult successWithValue:transformer(result.value) remaining:result.remaining];
         }
         return result;
         
-    } description:[self description]];
+    } description:[[self description] stringByAppendingString:@" with custom transform"]];
 }
 
 - (instancetype)withValueForKeyPath:(NSString *)keyPath
 {
-    return [self withTransform:^id(id value) {
+    return [[self withTransformer:^id(id value) {
         
         return [value valueForKeyPath:keyPath];
-    }];
+        
+    }] withDescription:[[self description] stringByAppendingFormat:@" with value for keyPath %@", keyPath]];
 }
 
 - (instancetype)withValue:(id)value
 {
-    return [self withTransform:^id(__unused id discardedValue) {
+    return [[self withTransformer:^id(__unused id discardedValue) {
         
         return value;
-    }];
+        
+    }] withDescription:[[self description] stringByAppendingFormat:@" with value %@", value]];
 }
 
 - (instancetype)discard
 {
-    return [self withTransform:^id(__unused id discardedValue) {
+    return [[self withTransformer:^id(__unused id discardedValue) {
         
         return nil;
-    }];
+        
+    }] withDescription:[[self description] stringByAppendingString:@" with discarded value"]];
 }
 
-- (instancetype)array
+- (instancetype)asArray
 {
-    return [self withTransform:^id(id value) {
+    return [[self withTransformer:^id(id value) {
         
         if (!value)
         {
@@ -410,12 +452,13 @@ NSString *const FXParserException = @"FXParserException";
             return @[value];
         }
         return value;
-    }];
+        
+    }] withDescription:[[self description] stringByAppendingString:@" as array"]];
 }
 
-- (instancetype)dictionary
+- (instancetype)asDictionary
 {
-    return [self withTransform:^id(NSArray *value) {
+    return [[self withTransformer:^id(NSArray *value) {
         
         if (value && ![value isKindOfClass:[NSArray class]])
         {
@@ -433,19 +476,141 @@ NSString *const FXParserException = @"FXParserException";
             results[value[i]] = value[i + 1];
         }
         return results;
-    }];
+        
+    }] withDescription:[[self description] stringByAppendingString:@" as dictionary"]];
 }
 
-- (instancetype)join:(NSString *)glue
+- (instancetype)asString
 {
-    return [self withTransform:^id(id value) {
+    return [[self withTransformer:^id(id value) {
         
-        if (value && ![value isKindOfClass:[NSArray class]])
+        if ([value isKindOfClass:[NSArray class]])
         {
-            [NSException raise:FXParserException format:@"attempted to perform join on a %@", [value class]];
+            return [value componentsJoinedByString:@""];
         }
-        return [value componentsJoinedByString:glue];
+        return [value description] ?: @"";
+        
+    }]  withDescription:[[self description] stringByAppendingString:@" as string"]];
+}
+
+- (instancetype)withComponentsJoinedByString:(NSString *)glue
+{
+    return [[self withTransformer:^id(id value) {
+        
+        if ([value isKindOfClass:[NSArray class]])
+        {
+            return [value componentsJoinedByString:glue];
+        }
+        return [value description];
+        
+    }] withDescription:[[self description] stringByAppendingFormat:@" joined by string \"%@\"", glue]];
+}
+
+@end
+
+
+@implementation FXParser (Grammar)
+
++ (instancetype)grammarParserWithTransformer:(FXParser *(^)(NSString *name, FXParser *parser))transformer
+{
+    //create dictionary for grammar
+    NSMutableDictionary *parsers = [NSMutableDictionary dictionary];
+    
+    //spacing
+    FXParser *whitespace = [[FXParser regexp:@"\\s*"] discard];
+    FXParser *linebreak = [[FXParser regexp:@"(\\s*\n)+"] discard];
+    
+    //comment
+    FXParser *comment = [[FXParser regexp:@"\\s*#.*"] discard];
+    
+    //identifiers
+    FXParser *identifier = [[FXParser regexp:@"[a-zA-Z][a-zA-Z0-9_-]*"] withTransformer:^id(NSString *name) {
+        
+        FXParser *parser = parsers[name];
+        if (!parser)
+        {
+            parser = [[FXParser forwardDeclaration] withDescription:name];
+            parsers[name] = parser;
+        }
+        return parser;
     }];
+    
+    //string
+    FXParser *quote = [[FXParser string:@"\""] discard];
+    FXParser *escapedChar = [FXParser regexp:@"\\([\"\\\\\\/])" replacement:@"$1"];
+    FXParser *backspace = [FXParser regexp:@"\\\\b" replacement:@"\b"];
+    FXParser *formfeed = [FXParser regexp:@"\\\\f" replacement:@"\f"];
+    FXParser *linefeed = [FXParser regexp:@"\\\\n" replacement:@"\n"];
+    FXParser *carriageReturn = [FXParser regexp:@"\\\\r" replacement:@"\r"];
+    FXParser *tab = [FXParser regexp:@"\\\\t" replacement:@"\t"];
+    FXParser *stringEscape = [FXParser oneOf:@[escapedChar, backspace, formfeed, linefeed, carriageReturn, tab]];
+    FXParser *string = [[FXParser sequence:@[quote, [[[[stringEscape or:[FXParser regexp:@"[^\\\"]"]] oneOrMoreTimes] optional] asString], quote]] withTransformer:^(id value) {
+        
+        return [FXParser string:value];
+    }];
+    
+    //regex
+    FXParser *solidus = [[FXParser string:@"/"] discard];
+    FXParser *escapedSolidus = [[FXParser string:@"\\\\/"] withValue:@"/"];
+    FXParser *regexPattern = [[[[escapedSolidus or:[FXParser regexp:@"[^\\/\n]"]] oneOrMoreTimes] optional] asString];
+    FXParser *regexReplacement = [[[[stringEscape or:[FXParser regexp:@"[^\\/\n]"]] oneOrMoreTimes] optional] withComponentsJoinedByString:@""]; //join with "" so empty string is discarded
+    FXParser *regex = [[FXParser sequence:@[solidus, regexPattern, solidus]] withTransformer:^id(NSString *pattern) {
+        
+        return [FXParser regexp:pattern];
+    }];
+    FXParser *regexReplace = [[FXParser sequence:@[[[FXParser string:@"s"] discard], solidus, regexPattern, solidus, regexReplacement, solidus]] withTransformer:^id(id patternAndReplacement) {
+        
+        if ([patternAndReplacement isKindOfClass:[NSString class]])
+        {
+            return [[FXParser regexp:patternAndReplacement] discard];
+        }
+        else
+        {
+            return [FXParser regexp:patternAndReplacement[0] replacement:patternAndReplacement[1]];
+        }
+    }];
+    
+    //rules
+    FXParser *primitive = [FXParser oneOf:@[string, regex, regexReplace, identifier]];
+    FXParser *subexpression = [FXParser forwardDeclaration];
+    FXParser *optional = [[[primitive or:subexpression] then:[[FXParser string:@"?"] discard]] withTransformer:^id(FXParser *p) {
+        
+        return [p optional];
+    }];
+    FXParser *zeroOrMore = [[[primitive or:subexpression] then:[[FXParser string:@"*"] discard]] withTransformer:^id(FXParser *p) {
+        
+        return [p zeroOrMoreTimes];
+    }];
+    FXParser *oneOrMore = [[[primitive or:subexpression] then:[[FXParser string:@"+"] discard]] withTransformer:^id(FXParser *p) {
+        
+        return [p oneOrMoreTimes];
+    }];
+    FXParser *repetitions = [FXParser oneOf:@[optional, zeroOrMore, oneOrMore]];
+    FXParser *options = [[[FXParser oneOf:@[primitive, subexpression, repetitions]] then:[[[[FXParser regexp:@"\\s*\\|\\s*"] discard] then:[FXParser oneOf:@[primitive, subexpression, repetitions]]] oneOrMoreTimes]] withTransformer:^id(NSArray *list) {
+        
+        return [FXParser oneOf:list];
+    }];
+    FXParser *sequence = [[[FXParser oneOf:@[primitive, subexpression, repetitions, options]] then:[[[[FXParser regexp:@" "] discard] then:[FXParser oneOf:@[primitive, subexpression, repetitions, options]]] oneOrMoreTimes]] withTransformer:^id(NSArray *seq) {
+        
+        return [FXParser sequence:seq];
+    }];
+    [subexpression setImplementation:[FXParser sequence:@[[[FXParser string:@"("] discard], [FXParser oneOf:@[primitive, repetitions, options, sequence, subexpression]], [[FXParser string:@")"] discard]]]];
+    FXParser *rule = [[FXParser sequence:@[identifier, whitespace, [FXParser oneOf:@[primitive, repetitions, options, sequence, subexpression]]]] withTransformer:^id(NSArray *r) {
+        
+        FXParser *parser = [r firstObject];
+        NSString *name = [parser description];
+        FXParser *implementation = [r lastObject];
+        if (transformer)
+        {
+            implementation = transformer(name, implementation);
+        }
+        [parser setImplementation:implementation];
+        return parser;
+    }];
+    
+    //parse grammar
+    FXParser *line = [comment or:[rule then:[comment optional]]];
+    return [[[line asArray] separatedBy:linebreak] withValue:parsers];
 }
 
 @end

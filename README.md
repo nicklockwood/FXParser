@@ -113,7 +113,7 @@ This method creates a parser that will match the specified regular expression.
     
 This method creates a parser that will match the specified regular expression, but can replace the captured text using a replacement template string, where $0-n can be used to represent the captured subexpressions from the regexp. (This replacement is technically a type of value transform, but it makes sense to include it in the constructor so you do not have to duplicate the regexp pattern in a separate call).
 
-    - (instancetype)parserWithDescription:(NSString *)description;
+    - (instancetype)withDescription:(NSString *)description;
     
 This method can be used to override the description of an existing parser. So for example, for a parser that matches the regular expression \d you might want to change the description from the default "a string matching the pattern \d" to "a numeric digit". Note that FXParser objects are (mostly) immutable, so rather than modifying the parser, this will create and return a new parser object that matches the behaviour of the original but uses the new description.
     
@@ -151,9 +151,17 @@ This method method takes an array of parsers and assembles them to form a single
     
 This method returns a new parser that will return success regardless of whether the original parser matches or not. This is useful for matching irrelevant content such as optional white space between tokens.
     
-    - (instancetype)oneOrMore;
+    - (instancetype)zeroOrMoreTimes;
     
-This method returns a new parser that will match a sequence of one or more of the original parser's required strings in sequence. If you wish to match a sequence of zero or more, you can chain this method with the `optional` modifier mentioned above.
+This method returns a new parser that will match a sequence of zero or more of the original parser's required strings in sequence.
+    
+    - (instancetype)oneOrMoreTimes;
+    
+This method returns a new parser that will match a sequence of one or more of the original parser's required strings in sequence.
+    
+    - (instancetype)twoOrMoreTimes;
+    
+This method returns a new parser that will match a sequence of two or more of the original parser's required strings in sequence.
     
     - (instancetype)separatedBy:(FXParser *)parser;
     
@@ -161,7 +169,7 @@ This method returns a new parser that will match a sequence of one or more insta
     
     - (instancetype)surroundedBy:(FXParser *)parser;
     
-This is a convenience method that returns a new parser that matches the original string preceeded and followed by the supplied parser's expected string. This might be used to match a string in quotes for example, or a token surrounded by white space. It is equivalent to `[FXParser sequence:@[parser, self, parser]]`.
+This is a convenience method that returns a new parser that matches the original string preceded and followed by the supplied parser's expected string. This might be used to match a string in quotes for example, or a token surrounded by white space. It is equivalent to `[FXParser sequence:@[parser, self, parser]]`.
     
     - (instancetype)or:(FXParser *)parser;
     
@@ -177,17 +185,21 @@ Value transformers
 
 These methods are used to convert the value returned in the FXParserResult object to a new value. This is useful if you want to control the form that your parsed data is converted to. Note that applying a value transform to a parser will discard any children of the original result.
 
-    - (instancetype)withTransform:(FXParserValueTransform)transform;
+    - (instancetype)withTransformer:(FXParserValueTransformer)transformer;
     
-This is the most flexible value transform function. It takes a block parameter that can be used to apply an arbitrary function to the value. The FXParserValueTransform block has the following signature:
+This is the most flexible value transformer function. It takes a block parameter that can be used to apply an arbitrary function to the value. The FXParserValueTransformer block has the following signature:
 
-    id (^FXParserValueTransform)(id value);
+    id (^FXParserValueTransformer)(id value);
     
 The predicate block takes an input value and returns an output value. How you get from one to the other is up to you, and the values can be of any object type.
+
+    - (instancetype)withComponentsJoinedByString:(NSString *)glue;
+    
+This converts an array value to a string by joining them together with the supplied "glue" string as a separator using NSArray's `componentsJoinedByString:` method. If the value is not an array, the `description` string will be returned. Unlike the `asString` method, if the value is nil it will *not* be promoted to an empty string.
     
     - (instancetype)withValueForKeyPath:(NSString *)keyPath;
     
-Sometimes you want actually want a sub-property of a captured value, or the result of calling a method on the object (e.g. [string lowerCaseString]) - you can use the `withValueForKeyPath:` transform method for that. Specify a keypath that will be called on the value object and used to return the replacement value. 
+Sometimes you want actually want a sub-property of a captured value, or the result of calling a method on the object (e.g. [string lowerCaseString]) - you can use the `withValueForKeyPath:` transformer method for that. Specify a keyPath that will be called on the value object and used to return the replacement value. 
     
     - (instancetype)withValue:(id)value;
     
@@ -197,17 +209,67 @@ Sometimes you just want to replace the captured value with a specific replacemen
     
 Occasionally you will need to match some data that you are not interested in keeping (e.g. white space). Use the `discard` transform to remove it from the results altogether.
     
-    - (instancetype)array;
+    - (instancetype)asArray;
     
-Sometimes you will need to match zero or more instances of a pattern, but you need the result to always be returned as an array even if it is an array containing only one object (or none). The `array` transform will inspect the value and either return it unmodified if it's already an array, wrap it in an array if it's a single object, or create a new empty array if the value is nil.
+Sometimes you will need to match zero or more instances of a pattern, but you need the result to always be returned as an array even if it is an array containing only one object (or none). The `asArray` transform will inspect the value and either return it unmodified if it's already an array, wrap it in an array if it's a single object, or create a new empty array if the value is nil.
     
-    - (instancetype)dictionary;
+    - (instancetype)asDictionary;
     
-The `dictionary` transform will take an array value and treat it as an interleaved sequence of keys and values, which are gathered into an NSDictionary and returned. If the original value is nil, an empty dictionary will be returned. If the original value is not an array, or has an odd number of items, this method will throw an exception.
+The `asDictionary` transform will take an array value and treat it as an interleaved sequence of keys and objects, which are gathered into an NSDictionary and returned. If the original value is nil, an empty dictionary will be returned. If the original value is not an array, or has an odd number of items, this method will throw an exception.
+
+    - (instancetype)asString;
     
-    - (instancetype)join:(NSString *)glue;
+The `asString` transform will take an array of value and join them to make a string using NSArray's `componentsJoinedByString:` method. If the value is not an array, the `description` string will be returned. If the value is nil, an empty string will be returned.
+
+Grammar
+--------
+
+Instead of constructing a set of parsers in code, you can instead use the following method to generate a collection of parsers from a text file:
+
+    + (FXParserResult *)parseGrammar:(NSString *)grammarString withTransformer:(FXParser *(^)(NSString *name, FXParser *parser))transformer;
     
-This method takes an array of values and "glues" them together with the supplied string as a separator using NSArray's `componentsJoinedByString:` method.
+The grammarString should consist of one or more lines, each of the form:
+
+    name    rule
+    
+Where "name" is the name of a parser, and "rule" is a description of its behaviour. Each rule can consist of one or more of the following primitive types:
+
+    "string" - an exact string to match
+    /pattern/ - a regular expression to match
+    s/pattern/replacement/ - a regular expression and replacement value (an empty replacement discards value)
+    name - the name of another rule
+    
+These primitive rules can be combined as follows:
+
+    rule rule - multiple rules can be separated by spaces to indicate a sequence
+    rule | rule - multiple rules separated by the | character means either/or
+    rule? - a rule followed by a ? is optional
+    rule+ - a rule followed by a + is repeated one or more times
+    rule* - a rule followed by a * is repeated zero or more times
+    
+Compound rules can be nested using brackets, as follows:
+
+    rule1 (rule2 | rule3)+ - this would mean "rule1 followed by one or more instances of rule2 or 3"
+    
+You can also add comments to your grammar file using #:
+
+    #comment on its own line
+    rulename    rule    #comment following a rule
+    
+The "transformer" block can be used to substitute a replacement rule for any rule parsed from the grammar. This is useful for implementing custom valueTransformers, which cannot be specified in the grammar file. For example, this would replace the parser "foo" in the grammar with a copy that formats the parsed value as an array:
+
+    [FXParser parseGrammar:grammarString withTransformer:id^(NSString *name, FXParser *parser) {
+        
+        if ([name isEqualToString:@"foo"])
+        {
+            return [parser asArray];
+        }
+        return parser;
+    }];
+    
+The parseGrammar:withTransformer: method returns an FXParserResult indicating success or failure. If result.success == YES, result.value will be a dictionary containing the FXParser objects created from the grammar file.
+
+See the BASICInterpreter and JSONParser examples for more details.
 
 
 FXParserResult
@@ -247,7 +309,7 @@ This is used to generate an FXParserResult that represents a successful parsing 
 
 1. The context of the individual results (e.g. their position within the string) is not preserved.
 
-2. Nested rules will produce nested arrays of values instead of a single concatenated array, which may be harder to work with (note that if you want nested arrays of values in the results, you can use the `array` value transform method to redefine an array of results as a single array-type value).
+2. Nested rules will produce nested arrays of values instead of a single concatenated array, which may be harder to work with (note that if you want nested arrays of values in the results, you can use the `asArray` value transform method to redefine an array of results as a single array-type value).
     
     + (instancetype)failureWithChildren:(NSArray *)children expected:(NSString *)description remaining:(NSRange)remaining;
     
@@ -273,7 +335,7 @@ A. The simplest way is probably to create a category on FXParser that adds a new
     
     + (instancetype)number
     {
-        return [[self regexp:@"-?[0-9]*\\.?[0-9]+"] parserWithDescription:@"a number"];
+        return [[self regexp:@"-?[0-9]*\\.?[0-9]+"] withDescription:@"a number"];
     }
     
     @end
@@ -293,6 +355,13 @@ A. The solution here would be to subclass FXParser and add a precedence property
 
 Release Notes
 ---------------
+
+Version 1.1
+
+- Renamed some methods for clarity and to conform better with Objective-C conventions
+- Added new grammar specification syntax and built-in parser (implemented using FXParser)
+- Improved description methods to provide more detail about parsers
+- Added BASIC interpreter example
 
 Version 1.0.1
 

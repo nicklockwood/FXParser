@@ -1,0 +1,25 @@
+whitespace      s/\s*//
+
+openBracket     s/\s*\[\s*//
+closeBracket    s/\s*\]\s*//
+openBrace       s/\s*\{\s*//
+closeBrace      s/\s*\}\s*//
+comma           s/\s*,\s*//
+colon           s/\s*:\s*//
+
+integer         /-?0|([1-9][0-9]*)/
+decimal         /-?0|([1-9][0-9]*)(\.[0-9]+)?/
+number          integer | decimal
+
+boolean         /true|false/
+null            "null"
+
+quote           s/"//
+escape          /\\./
+string          quote (escape | /[^"]/)* quote
+
+pair            string colon json
+array           openBracket (json (comma json)+)? closeBracket
+object          openBrace (pair (comma pair)+)? closeBrace
+
+json            whitespace? (number | boolean | null | string | array | object)

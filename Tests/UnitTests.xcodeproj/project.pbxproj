@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		01244B141934E926000BF3CD /* UnitTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 01244B131934E926000BF3CD /* UnitTests.m */; };
 		01BF9B6B193786BB008101FC /* FXParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 01BF9B6A193786BB008101FC /* FXParser.m */; };
+		01D120001938C3EE008D7BE3 /* JSONGrammar.txt in Resources */ = {isa = PBXBuildFile; fileRef = 01D11FFF1938C3EE008D7BE3 /* JSONGrammar.txt */; };
 		01D28C891907BFC80021C719 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01D28C881907BFC80021C719 /* XCTest.framework */; };
 		01D28C8A1907BFC80021C719 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01D28C6F1907BFC80021C719 /* Foundation.framework */; };
 		01D28C8B1907BFC80021C719 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01D28C731907BFC80021C719 /* UIKit.framework */; };
@@ -18,6 +19,7 @@
 		01244B131934E926000BF3CD /* UnitTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UnitTests.m; sourceTree = "<group>"; };
 		01BF9B69193786BB008101FC /* FXParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FXParser.h; sourceTree = "<group>"; };
 		01BF9B6A193786BB008101FC /* FXParser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FXParser.m; sourceTree = "<group>"; };
+		01D11FFF1938C3EE008D7BE3 /* JSONGrammar.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = JSONGrammar.txt; sourceTree = "<group>"; };
 		01D28C6F1907BFC80021C719 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		01D28C711907BFC80021C719 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		01D28C731907BFC80021C719 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
@@ -91,6 +93,7 @@
 		01D28C8F1907BFC80021C719 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				01D11FFF1938C3EE008D7BE3 /* JSONGrammar.txt */,
 				01D28C901907BFC80021C719 /* UnitTests-Info.plist */,
 			);
 			name = "Supporting Files";
@@ -152,6 +155,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				01D120001938C3EE008D7BE3 /* JSONGrammar.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

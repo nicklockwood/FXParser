@@ -1,7 +1,7 @@
 //
 //  FXParser.h
 //
-//  Version 1.0.1
+//  Version 1.1
 //
 //  Created by Nick Lockwood on 15/01/2013.
 //  Copyright (c) 2013 Charcoal Design
@@ -46,7 +46,7 @@ extern NSString *const FXParserException;
 
 typedef FXParserResult *(^FXParserBlock)(NSString *input, NSRange range);
 typedef NSRange (^FXParserStringPredicate)(NSString *input, NSRange range);
-typedef id (^FXParserValueTransform)(id value);
+typedef id (^FXParserValueTransformer)(id value);
 
 
 @interface FXParserResult : NSObject
@@ -72,7 +72,7 @@ typedef id (^FXParserValueTransform)(id value);
 + (instancetype)regexp:(NSString *)pattern;
 + (instancetype)string:(NSString *)string;
 
-- (instancetype)parserWithDescription:(NSString *)description;
+- (instancetype)withDescription:(NSString *)description;
 
 + (instancetype)forwardDeclaration;
 - (void)setImplementation:(FXParser *)implementation;
@@ -89,7 +89,9 @@ typedef id (^FXParserValueTransform)(id value);
 + (instancetype)oneOf:(NSArray *)parsers;
 
 - (instancetype)optional;
-- (instancetype)oneOrMore;
+- (instancetype)zeroOrMoreTimes;
+- (instancetype)oneOrMoreTimes;
+- (instancetype)twoOrMoreTimes;
 - (instancetype)separatedBy:(FXParser *)parser;
 - (instancetype)surroundedBy:(FXParser *)parser;
 
@@ -101,14 +103,22 @@ typedef id (^FXParserValueTransform)(id value);
 
 @interface FXParser (ValueTransformers)
 
-- (instancetype)withTransform:(FXParserValueTransform)transform;
+- (instancetype)withTransformer:(FXParserValueTransformer)transformer;
+- (instancetype)withComponentsJoinedByString:(NSString *)glue;
 - (instancetype)withValueForKeyPath:(NSString *)keyPath;
 - (instancetype)withValue:(id)value;
 - (instancetype)discard;
 
-- (instancetype)array; //if value is not an array, converts it into an array of one or zero objects
-- (instancetype)dictionary; //converts an array of interleaved key/value pairs into a dictionary
-- (instancetype)join:(NSString *)glue; //joins an array of values
+- (instancetype)asArray; //if value is not an array, converts it into an array of one or zero objects
+- (instancetype)asDictionary; //converts an array of interleaved key/value pairs into a dictionary
+- (instancetype)asString; //joins an array of values to make a string, or returns description of any other value
+
+@end
+
+
+@interface FXParser (Grammar)
+
++ (instancetype)grammarParserWithTransformer:(FXParser *(^)(NSString *name, FXParser *parser))transformer;
 
 @end
 

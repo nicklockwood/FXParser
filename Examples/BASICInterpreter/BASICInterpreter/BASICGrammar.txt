@@ -1,0 +1,39 @@
+# BASIC grammar
+#-------------------------------
+
+#numeric literals
+integer             /-?0|([1-9][0-9]*)/
+decimal             /-?0|([1-9][0-9]*)(\.[0-9]+)?/
+number              integer | decimal
+
+#string literals
+quote               s/"//
+escapedQuote        s/\\"/"/
+newline             s/\\n/\n/
+escape              escapedQuote | newline
+string              quote (escape | /[^"]/)* quote
+
+#rvalues
+literal             number | string
+identifier          /[a-zA-Z][a-zA-Z0-9_]*/
+expression          (literal | identifier) (s/\s\+\s*// expression)?
+
+#console commands
+run                 s/run//
+new                 s/new//
+renumber            s/renumber//
+list                s/list//
+delete              s/delete\s+// integer
+command             s/\s+//? (run | new | renumber | list | delete)
+
+#instructions
+assignment          identifier s/\s*=\s*// expression
+print               s/print\s+// expression
+println             s/println\s+// expression
+input               s/input\s+// identifier
+goto                s/goto\s+// integer
+instruction         s/\s+//? (assignment | print | println | input | goto)
+
+#program
+line                (command | instruction | (integer /.*/)) s/\s*\n+\s*//?
+program             instruction*
