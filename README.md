@@ -117,9 +117,13 @@ This method creates a parser that will match the specified regular expression, b
     
 This method can be used to override the description of an existing parser. So for example, for a parser that matches the regular expression \d you might want to change the description from the default "a string matching the pattern \d" to "a numeric digit". Note that FXParser objects are (mostly) immutable, so rather than modifying the parser, this will create and return a new parser object that matches the behaviour of the original but uses the new description.
     
-    + (instancetype)forwardDeclaration;
+    - (instancetype)withName:(NSString *)name;
+
+This method can be used to override the name of an existing parser. This lets you provide simple, readable names for your parsers, without having to override the description and lose detail when debugging. You can check a parser's name via the 'name' property.
     
-Sometimes it is necessary to create recursive rules, which can be difficult if you end up needing to refer to a parser before you've defined it. The `forwardDeclaration` constructor creates a "blank" parser that you can use within another parser definition on the understanding that you will supply the implementation using the `setImplementation:` method before you attempt to parse anything. Attempting to parse any text before the implementation has been set will throw an exception.
+    + (instancetype)forwardDeclarationWithName:(NSString *)name;
+    
+Sometimes it is necessary to create recursive rules, which can be difficult if you end up needing to refer to a parser before you've defined it. The `forwardDeclaration` constructor creates a "blank" parser that you can use within another parser definition on the understanding that you will supply the implementation using the `setImplementation:` method before you attempt to parse anything. Attempting to parse any text before the implementation has been set will throw an exception. This method also sets the parser name so that it's easier to identify later if something goes wrong and the implementation is never set.
     
     - (void)setImplementation:(FXParser *)implementation;
     
@@ -355,6 +359,12 @@ A. The solution here would be to subclass FXParser and add a precedence property
 
 Release Notes
 ---------------
+
+Version 1.2
+
+- Parsers now have an optional "name" property that can be used to refer to them in descriptions
+- Much improved description methods provide shorter, more readable parser descriptions for debugging
+- The -debugDescription method (used when logging parsers in the console) now includes address info for child parsers, making it easier to dig in for more information
 
 Version 1.1
 

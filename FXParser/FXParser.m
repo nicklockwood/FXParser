@@ -1,7 +1,7 @@
 //
 //  FXParser.m
 //
-//  Version 1.1
+//  Version 1.2 beta
 //
 //  Created by Nick Lockwood on 15/01/2013.
 //  Copyright (c) 2013 Charcoal Design
@@ -33,6 +33,7 @@
 
 #import "FXParser.h"
 #pragma GCC diagnostic ignored "-Wobjc-missing-property-synthesis"
+#pragma GCC diagnostic ignored "-Wdirect-ivar-access"
 #pragma GCC diagnostic ignored "-Wgnu"
 
 
@@ -116,10 +117,11 @@ NSString *const FXParserException = @"FXParserException";
 @end
 
 
-@interface FXParser ()
+@interface FXParser () <NSCopying>
 
 @property (nonatomic, copy) FXParserBlock block;
 @property (nonatomic, copy) NSString *description;
+@property (nonatomic, readwrite) NSString *name;
 
 @end
 
@@ -148,15 +150,6 @@ NSString *const FXParserException = @"FXParserException";
     } description:description];
 }
 
-+ (instancetype)regexp:(NSString *)pattern
-{
-    return [self stringMatchingPredicate:^NSRange(NSString *input, NSRange range) {
-        
-        return [input rangeOfString:pattern options:(NSStringCompareOptions)(NSRegularExpressionSearch|NSAnchoredSearch) range:range];
-        
-    } description:[NSString stringWithFormat:@"a string matching the pattern %@", pattern]];
-}
-
 + (instancetype)regexp:(NSString *)pattern replacement:(NSString *)replacement
 {
     return [[[self regexp:pattern] withTransformer:^id(id value) {
@@ -170,6 +163,17 @@ NSString *const FXParserException = @"FXParserException";
     }] withDescription:[NSString stringWithFormat:@"a string matching the pattern %@ with replacement %@", pattern, replacement]];
 }
 
++ (instancetype)regexp:(NSString *)pattern
+{
+    return [self stringMatchingPredicate:^NSRange(NSString *input, NSRange range) {
+        
+        return [input rangeOfString:pattern options:(NSStringCompareOptions)(NSRegularExpressionSearch|NSAnchoredSearch) range:range];
+        
+    } description:[NSString stringWithFormat:@"a string matching the pattern %@", pattern]];
+}
+
+
+
 + (instancetype)string:(NSString *)string
 {
     return [self stringMatchingPredicate:^NSRange(NSString *input, NSRange range) {
@@ -179,15 +183,34 @@ NSString *const FXParserException = @"FXParserException";
     } description:string];
 }
 
-- (instancetype)withDescription:(NSString *)description
+- (id)copyWithZone:(NSZone *)zone
 {
-    return [[self class] parserWithBlock:self.block description:description];
+    FXParser *parser = [[[self class] allocWithZone:zone] init];
+    parser.block = self.block;
+    parser.description = self.description;
+    parser.name = self.name;
+    return parser;
 }
 
-+ (instancetype)forwardDeclaration
+- (instancetype)withDescription:(NSString *)description
+{
+    FXParser *parser = [self copy];
+    parser.description = description;
+    return parser;
+}
+
+- (instancetype)withName:(NSString *)name
+{
+    FXParser *parser = [self copy];
+    parser.name = name;
+    return parser;
+}
+
++ (instancetype)forwardDeclarationWithName:(NSString *)name
 {
     FXParser *parser = [[self alloc] init];
     parser.description = @"<forward declaration>";
+    parser.name = name;
     return parser;
 }
 
@@ -198,7 +221,8 @@ NSString *const FXParserException = @"FXParserException";
         [NSException raise:@"Implementation has already been set" format:nil];
     }
     self.block = implementation.block;
-    self.description = implementation.description;
+    self.description = implementation->_description;
+    self.name = implementation.name ?: self.name;
 }
 
 - (FXParserResult *)parse:(NSString *)input range:(NSRange)range
@@ -213,6 +237,22 @@ NSString *const FXParserException = @"FXParserException";
 - (FXParserResult *)parse:(NSString *)input
 {
     return [self parse:input range:NSMakeRange(0, [input length])];
+}
+
+- (NSString *)shortDescription
+{
+    return self.name? [NSString stringWithFormat:@"%@(%p)", self.name, self]: _description;
+}
+
+- (NSString *)debugDescription
+{
+    return [NSString stringWithFormat:@"<%@:%p name = \"%@\"; description = \"%@\"; >", [self class], self, self.name, _description];
+}
+
+- (NSString *)description
+{
+    NSString *description = _description ?: self.name;
+    return [description stringByReplacingOccurrencesOfString:@"\\(0x[0-9a-f]{9}\\)" withString:@"" options:NSRegularExpressionSearch range:NSMakeRange(0, [description length])];
 }
 
 @end
@@ -231,7 +271,7 @@ NSString *const FXParserException = @"FXParserException";
             FXParserResult *result = [parser parse:input range:_range];
             if (!result.success)
             {
-                return [FXParserResult failureWithChildren:children expected:[parser description] remaining:_range];
+                return [FXParserResult failureWithChildren:children expected:[parser shortDescription] remaining:_range];
             }
             if (result.children)
             {
@@ -245,12 +285,12 @@ NSString *const FXParserException = @"FXParserException";
         }
         return [FXParserResult successWithChildren:children remaining:_range];
         
-    } description:[[parsers valueForKey:@"description"] componentsJoinedByString:@" then "] ?: @""];
+    } description:[[parsers valueForKey:@"shortDescription"] componentsJoinedByString:@" then "] ?: @""];
 }
 
 + (instancetype)oneOf:(NSArray *)parsers
 {
-    NSArray *descriptions = [parsers valueForKeyPath:@"@distinctUnionOfObjects.description"];
+    NSArray *descriptions = [parsers valueForKeyPath:@"@distinctUnionOfObjects.shortDescription"];
     NSString *description = ([descriptions count] > 1)? [NSString stringWithFormat:@"either %@", [descriptions componentsJoinedByString:@" or "]]: [descriptions lastObject];
     
     return [FXParser parserWithBlock:^FXParserResult *(NSString *input, NSRange range) {
@@ -302,7 +342,7 @@ NSString *const FXParserException = @"FXParserException";
         }
         return [FXParserResult successWithValue:nil remaining:range];
     
-    } description:[NSString stringWithFormat:@"an optional %@", self]];
+    } description:[NSString stringWithFormat:@"optional %@", [self shortDescription]]];
 }
 
 - (instancetype)zeroOrMoreTimes
@@ -326,12 +366,12 @@ NSString *const FXParserException = @"FXParserException";
         }
         return [FXParserResult successWithChildren:children remaining:_range];
         
-    } description:[NSString stringWithFormat:@"zero or more instances of %@", self]];
+    } description:[NSString stringWithFormat:@"zero or more instances of %@", [self shortDescription]]];
 }
 
 - (instancetype)oneOrMoreTimes
 {
-    NSString *description = [NSString stringWithFormat:@"one or more instances of %@", self];
+    NSString *description = [NSString stringWithFormat:@"one or more instances of %@", [self shortDescription]];
     return [FXParser parserWithBlock:^FXParserResult *(NSString *input, NSRange range) {
         
         FXParserResult *result = [[self zeroOrMoreTimes] parse:input range:range];
@@ -353,7 +393,7 @@ NSString *const FXParserException = @"FXParserException";
 
 - (instancetype)twoOrMoreTimes
 {
-    NSString *description = [NSString stringWithFormat:@"two or more instances of %@", self];
+    NSString *description = [NSString stringWithFormat:@"two or more instances of %@", [self shortDescription]];
     return [FXParser parserWithBlock:^FXParserResult *(NSString *input, NSRange range) {
         
         FXParserResult *result = [[self zeroOrMoreTimes] parse:input range:range];
@@ -409,7 +449,7 @@ NSString *const FXParserException = @"FXParserException";
         }
         return result;
         
-    } description:[[self description] stringByAppendingString:@" with custom transform"]];
+    } description:[[self shortDescription] stringByAppendingString:@" with custom transform"]];
 }
 
 - (instancetype)withValueForKeyPath:(NSString *)keyPath
@@ -418,7 +458,7 @@ NSString *const FXParserException = @"FXParserException";
         
         return [value valueForKeyPath:keyPath];
         
-    }] withDescription:[[self description] stringByAppendingFormat:@" with value for keyPath %@", keyPath]];
+    }] withDescription:[[self shortDescription] stringByAppendingFormat:@" with value for keyPath %@", keyPath]];
 }
 
 - (instancetype)withValue:(id)value
@@ -427,7 +467,7 @@ NSString *const FXParserException = @"FXParserException";
         
         return value;
         
-    }] withDescription:[[self description] stringByAppendingFormat:@" with value %@", value]];
+    }] withDescription:[[self shortDescription] stringByAppendingFormat:@" with value %@", value]];
 }
 
 - (instancetype)discard
@@ -436,7 +476,7 @@ NSString *const FXParserException = @"FXParserException";
         
         return nil;
         
-    }] withDescription:[[self description] stringByAppendingString:@" with discarded value"]];
+    }] withDescription:[[self shortDescription] stringByAppendingString:@" with discarded value"]];
 }
 
 - (instancetype)asArray
@@ -453,7 +493,7 @@ NSString *const FXParserException = @"FXParserException";
         }
         return value;
         
-    }] withDescription:[[self description] stringByAppendingString:@" as array"]];
+    }] withDescription:[[self shortDescription] stringByAppendingString:@" as array"]];
 }
 
 - (instancetype)asDictionary
@@ -477,7 +517,7 @@ NSString *const FXParserException = @"FXParserException";
         }
         return results;
         
-    }] withDescription:[[self description] stringByAppendingString:@" as dictionary"]];
+    }] withDescription:[[self shortDescription] stringByAppendingString:@" as dictionary"]];
 }
 
 - (instancetype)asString
@@ -490,7 +530,7 @@ NSString *const FXParserException = @"FXParserException";
         }
         return [value description] ?: @"";
         
-    }]  withDescription:[[self description] stringByAppendingString:@" as string"]];
+    }]  withDescription:[[self shortDescription] stringByAppendingString:@" as string"]];
 }
 
 - (instancetype)withComponentsJoinedByString:(NSString *)glue
@@ -503,7 +543,7 @@ NSString *const FXParserException = @"FXParserException";
         }
         return [value description];
         
-    }] withDescription:[[self description] stringByAppendingFormat:@" joined by string \"%@\"", glue]];
+    }] withDescription:[[self shortDescription] stringByAppendingFormat:@" joined by string \"%@\"", glue]];
 }
 
 @end
@@ -529,7 +569,7 @@ NSString *const FXParserException = @"FXParserException";
         FXParser *parser = parsers[name];
         if (!parser)
         {
-            parser = [[FXParser forwardDeclaration] withDescription:name];
+            parser = [FXParser forwardDeclarationWithName:name];
             parsers[name] = parser;
         }
         return parser;
@@ -572,7 +612,7 @@ NSString *const FXParserException = @"FXParserException";
     
     //rules
     FXParser *primitive = [FXParser oneOf:@[string, regex, regexReplace, identifier]];
-    FXParser *subexpression = [FXParser forwardDeclaration];
+    FXParser *subexpression = [FXParser forwardDeclarationWithName:@"subexpression"];
     FXParser *optional = [[[primitive or:subexpression] then:[[FXParser string:@"?"] discard]] withTransformer:^id(FXParser *p) {
         
         return [p optional];
@@ -598,11 +638,10 @@ NSString *const FXParserException = @"FXParserException";
     FXParser *rule = [[FXParser sequence:@[identifier, whitespace, [FXParser oneOf:@[primitive, repetitions, options, sequence, subexpression]]]] withTransformer:^id(NSArray *r) {
         
         FXParser *parser = [r firstObject];
-        NSString *name = [parser description];
         FXParser *implementation = [r lastObject];
         if (transformer)
         {
-            implementation = transformer(name, implementation);
+            implementation = transformer(parser.name, implementation);
         }
         [parser setImplementation:implementation];
         return parser;

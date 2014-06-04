@@ -81,7 +81,7 @@
 - (void)testJSON
 {
     //create parser
-    FXParser *json = [FXParser forwardDeclaration];
+    FXParser *json = [FXParser forwardDeclarationWithName:@"json"];
     
     //spacing
     FXParser *whitespace = [[FXParser regexp:@"\\s*"] discard];
@@ -194,7 +194,7 @@
         }
         else if ([name isEqualToString:@"string"])
         {
-            return [[parser asString] withTransformer:^id(id value) {
+            return [[parser asString] withTransformer:^id(NSString *value) {
                 
                 value = [value stringByReplacingOccurrencesOfString:@"\\\"" withString:@"\""];
                 value = [value stringByReplacingOccurrencesOfString:@"\\\\" withString:@"\\"];

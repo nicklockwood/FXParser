@@ -1,7 +1,7 @@
 //
 //  FXParser.h
 //
-//  Version 1.1
+//  Version 1.2 beta
 //
 //  Created by Nick Lockwood on 15/01/2013.
 //  Copyright (c) 2013 Charcoal Design
@@ -64,6 +64,8 @@ typedef id (^FXParserValueTransformer)(id value);
 @end
 
 
+
+
 @interface FXParser : NSObject
 
 + (instancetype)parserWithBlock:(FXParserBlock)block description:(NSString *)description;
@@ -73,12 +75,15 @@ typedef id (^FXParserValueTransformer)(id value);
 + (instancetype)string:(NSString *)string;
 
 - (instancetype)withDescription:(NSString *)description;
+- (instancetype)withName:(NSString *)name;
 
-+ (instancetype)forwardDeclaration;
++ (instancetype)forwardDeclarationWithName:(NSString *)name;
 - (void)setImplementation:(FXParser *)implementation;
 
 - (FXParserResult *)parse:(NSString *)input range:(NSRange)range;
 - (FXParserResult *)parse:(NSString *)input;
+
+@property (nonatomic, readonly) NSString *name;
 
 @end
 
