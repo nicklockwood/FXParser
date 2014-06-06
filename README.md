@@ -365,6 +365,8 @@ Version 1.2
 - Parsers now have an optional "name" property that can be used to refer to them in descriptions
 - Much improved description methods provide shorter, more readable parser descriptions for debugging
 - The -debugDescription method (used when logging parsers in the console) now includes address info for child parsers, making it easier to dig in for more information
+- Fixed bug where grammar would return a stray rule called "s" with no implementation
+- Fixed bug where grammar would not correctly match an escaped slash in a regular expression
 
 Version 1.1
 

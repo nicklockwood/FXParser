@@ -22,6 +22,29 @@
 #import "BASICGrammar.h"
 
 
+@interface State : NSObject
+
+@property (nonatomic, assign) NSInteger programCounter;
+@property (nonatomic, strong) NSMutableArray *loopStack;
+
+@end
+
+
+@implementation State
+
+- (id)init
+{
+    if ((self = [super init]))
+    {
+        _programCounter = 0;
+        _loopStack = [NSMutableArray array];
+    }
+    return self;
+}
+
+@end
+
+
 @interface Variable : NSObject
 
 + (void)resetVariables;
@@ -117,13 +140,15 @@ static NSMutableDictionary *storage = nil;
 @interface Statement : NSObject
 
 + (instancetype)statementWithBlock:(void (^)(void))block;
-
-@property (nonatomic, readonly) void (^block)(void);
+- (void)execute;
 
 @end
 
 
 @implementation Statement
+{
+    void (^_block)(void);
+}
 
 + (instancetype)statementWithBlock:(void (^)(void))block
 {
@@ -131,7 +156,63 @@ static NSMutableDictionary *storage = nil;
     statement->_block = block;
     return statement;
 }
+
+- (void)execute
+{
+    _block();
+}
                                     
+@end
+
+
+@interface Loop : Statement
+
++ (instancetype)loopWithStartBlock:(void (^)(void))block repeatBlock:(BOOL (^)(void))block state:(State *)state;
+- (void)repeat;
+
+@end
+
+
+@implementation Loop
+{
+    BOOL (^_repeatBlock)(void);
+    State *_state;
+    NSInteger _programCounterReset;
+}
+
++ (instancetype)statementWithBlock:(void (^)(void))block
+{
+    [self doesNotRecognizeSelector:_cmd];
+    return nil;
+}
+
++ (instancetype)loopWithStartBlock:(void (^)(void))block repeatBlock:(BOOL (^)(void))repeatBlock state:(State *)state
+{
+    Loop *loop = (Loop *)[super statementWithBlock:block];
+    loop->_repeatBlock = repeatBlock;
+    loop->_state = state;
+    return loop;
+}
+
+- (void)execute
+{
+    _programCounterReset = _state.programCounter;
+    [_state.loopStack addObject:self];
+    [super execute];
+}
+
+- (void)repeat
+{
+    if (_repeatBlock())
+    {
+        _state.programCounter = _programCounterReset;
+    }
+    else
+    {
+        [_state.loopStack removeLastObject];
+    }
+}
+
 @end
 
 
@@ -140,11 +221,11 @@ int main(int argc, const char * aargv[])
     @autoreleasepool
     {
         //program
+        State *state = [[State alloc] init];
         __block FXParser *commandInterpreter = nil;
         __block FXParser *instructionInterpreter = nil;
         __block NSMutableDictionary *linesByNumber = [NSMutableDictionary dictionary];
         __block NSArray *lineNumbers = nil;
-        __block NSInteger programCounter = 0;
         __block BOOL programRunning = NO;
         
         //define interpreter callbacks
@@ -169,7 +250,7 @@ int main(int argc, const char * aargv[])
                     return [Variable variableWithName:name];
                 }];
             }
-            else if ([name isEqualToString:@"expression"])
+            else if ([name isEqualToString:@"addition"])
             {
                 return [parser withTransformer:^id (id value) {
                     
@@ -190,6 +271,87 @@ int main(int argc, const char * aargv[])
                             else
                             {
                                 return [[a description] stringByAppendingString:[b description]];
+                            }
+                        }
+                        return value;
+                    }];
+                }];
+            }
+            else if ([name isEqualToString:@"subtraction"])
+            {
+                return [parser withTransformer:^id (id value) {
+                    
+                    return [Expression expressionWithBlock:^id {
+                        
+                        if ([value isKindOfClass:[NSArray class]])
+                        {
+                            id a = value[0];
+                            if ([a isKindOfClass:[Variable class]])
+                            {
+                                a = ((Variable *)a).value;
+                            }
+                            id b = [(Expression *)value[1] value];
+                            if ([a isKindOfClass:[NSNumber class]] && [b isKindOfClass:[NSNumber class]])
+                            {
+                                return @([a doubleValue] - [b doubleValue]);
+                            }
+                            else
+                            {
+                                return @"[error]";
+                            }
+                        }
+                        return value;
+                    }];
+                }];
+            }
+            else if ([name isEqualToString:@"multiplication"])
+            {
+                return [parser withTransformer:^id (id value) {
+                    
+                    return [Expression expressionWithBlock:^id {
+                        
+                        if ([value isKindOfClass:[NSArray class]])
+                        {
+                            id a = value[0];
+                            if ([a isKindOfClass:[Variable class]])
+                            {
+                                a = ((Variable *)a).value;
+                            }
+                            id b = [(Expression *)value[1] value];
+                            if ([a isKindOfClass:[NSNumber class]] && [b isKindOfClass:[NSNumber class]])
+                            {
+                                return @([a doubleValue] * [b doubleValue]);
+                            }
+                            else
+                            {
+                                return @"[error]";
+                            }
+                        }
+                        return value;
+                    }];
+                }];
+            }
+            else if ([name isEqualToString:@"division"])
+            {
+                return [parser withTransformer:^id (id value) {
+                    
+                    return [Expression expressionWithBlock:^id {
+                        
+                        if ([value isKindOfClass:[NSArray class]])
+                        {
+                            id a = value[0];
+                            if ([a isKindOfClass:[Variable class]])
+                            {
+                                a = ((Variable *)a).value;
+                            }
+                            id b = [(Expression *)value[1] value];
+                            if ([a isKindOfClass:[NSNumber class]] && [b isKindOfClass:[NSNumber class]])
+                            {
+                                return @([a doubleValue] / [b doubleValue]);
+                            }
+                            else
+                            {
+                                return @"[error]";
                             }
                         }
                         return value;
@@ -242,14 +404,53 @@ int main(int argc, const char * aargv[])
             else if ([name isEqualToString:@"goto"])
             {
                 return [parser withTransformer:^id(NSNumber *number) {
-                    
+
                     return [Statement statementWithBlock:^{
                         
-                        programCounter = [lineNumbers indexOfObject:number];
-                        if (programCounter == NSNotFound)
+                        state.programCounter = [lineNumbers indexOfObject:number];
+                        if (state.programCounter == NSNotFound)
                         {
                             NSLog(@"Line number %@ not found. Program terminated.", number);
                             programRunning = NO;
+                        }
+                    }];
+                }];
+            }
+            else if ([name isEqualToString:@"for"])
+            {
+                return [parser withTransformer:^id(NSArray *parts) {
+                    
+                    Variable *index = parts[0];
+                    Expression *start = parts[1];
+                    Expression *end = parts[2];
+                    
+                    return [Loop loopWithStartBlock:^{
+                        
+                        index.value = start.value;
+                        
+                    } repeatBlock:^BOOL{
+                        
+                        index.value = @([index.value doubleValue] + 1);
+                        return ([index.value doubleValue] <= [end.value doubleValue]);
+                        
+                    } state:state];
+                }];
+            }
+            else if ([name isEqualToString:@"next"])
+            {
+                return [parser withTransformer:^id(NSArray *parts) {
+                    
+                    return [Statement statementWithBlock:^{
+                        
+                        Loop *loop = [state.loopStack lastObject];
+                        if (!loop)
+                        {
+                            NSLog(@"Next without for. Program terminated.");
+                            programRunning = NO;
+                        }
+                        else
+                        {
+                            [loop repeat];
                         }
                     }];
                 }];
@@ -287,16 +488,15 @@ int main(int argc, const char * aargv[])
                     return [Statement statementWithBlock:^{
                     
                         //run program
-                        programCounter = 0;
+                        state.programCounter = 0;
                         programRunning = YES;
                         lineNumbers = [[linesByNumber allKeys] sortedArrayUsingSelector:@selector(compare:)];
-                        while (programRunning && programCounter < [lineNumbers count])
+                        while (programRunning && state.programCounter < [lineNumbers count])
                         {
-                            NSNumber *lineNumber = lineNumbers[programCounter ++];
+                            NSNumber *lineNumber = lineNumbers[state.programCounter ++];
                             NSString *instruction = linesByNumber[lineNumber];
                             FXParserResult *result = [instructionInterpreter parse:instruction];
-                            Statement *statement = result.value;
-                            statement.block();
+                            [result.value execute];
                         }
                     }];
                 }];
@@ -308,6 +508,8 @@ int main(int argc, const char * aargv[])
                     return [Statement statementWithBlock:^{
                     
                         //clear program
+                        [Variable resetVariables];
+                        [state.loopStack removeAllObjects];
                         [linesByNumber removeAllObjects];
                     }];
                 }];
@@ -362,9 +564,10 @@ int main(int argc, const char * aargv[])
                 return [parser withTransformer:^id(NSArray *statements) {
                     
                     [Variable resetVariables];
+                    [state.loopStack removeAllObjects];
                     for (Statement *statement in statements)
                     {
-                        statement.block();
+                        [statement execute];
                     }
                     return nil;
                 }];
@@ -418,7 +621,7 @@ int main(int argc, const char * aargv[])
                 else if (result.value)
                 {
                     //execute command
-                    ((Statement *)result.value).block();
+                    [result.value execute];
                 }
             }
         }

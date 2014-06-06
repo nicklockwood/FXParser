@@ -265,4 +265,17 @@
     XCTAssertFalse([json parse:@"barfoo"].success, @"Something went wrong");
 }
 
+- (void)testEscapedSolidusInGrammar
+{
+    //create parser
+    FXParser *grammarParser = [FXParser grammarParserWithTransformer:NULL];
+    
+    //parse grammar
+    NSString *grammarString = @"rule s/\\///";
+    FXParserResult *result = [grammarParser parse:grammarString];
+    XCTAssertTrue(result.success, @"Something went wrong");
+    XCTAssertEqual([result.value count], 1, @"Something went wrong");
+    XCTAssertEqualObjects([result.value[@"rule"] description], @"a string matching the pattern / with discarded value", @"Something went wrong");
+}
+
 @end

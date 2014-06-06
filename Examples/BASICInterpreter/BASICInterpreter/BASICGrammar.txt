@@ -16,7 +16,11 @@ string              quote (escape | /[^"]/)* quote
 #rvalues
 literal             number | string
 identifier          /[a-zA-Z][a-zA-Z0-9_]*/
-expression          (literal | identifier) (s/\s\+\s*// expression)?
+addition            (literal | identifier) (s/\s*\+\s*// expression)?
+subtraction         (literal | identifier) (s/\s*\-\s*// expression)?
+multiplication      (literal | identifier) (s/\s*\*\s*// expression)?
+division            (literal | identifier) (s/\s*\/\s*// expression)?
+expression          addition | subtraction | multiplication | division
 
 #console commands
 run                 s/run//
@@ -32,7 +36,9 @@ print               s/print\s+// expression
 println             s/println\s+// expression
 input               s/input\s+// identifier
 goto                s/goto\s+// integer
-instruction         s/\s+//? (assignment | print | println | input | goto)
+for                 s/for\s+// identifier s/\s*=\s*// expression s/\s+to\s+// expression
+next                s/next//
+instruction         s/\s+//? (assignment | print | println | input | goto | for | next)
 
 #program
 line                (command | instruction | (integer /.*/)) s/\s*\n+\s*//?

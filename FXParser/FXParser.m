@@ -553,7 +553,8 @@ NSString *const FXParserException = @"FXParserException";
 
 + (instancetype)grammarParserWithTransformer:(FXParser *(^)(NSString *name, FXParser *parser))transformer
 {
-    //create dictionary for grammar
+    //create dictionaries for identifiers and grammar
+    NSMutableDictionary *identifiers = [NSMutableDictionary dictionary];
     NSMutableDictionary *parsers = [NSMutableDictionary dictionary];
     
     //spacing
@@ -566,11 +567,11 @@ NSString *const FXParserException = @"FXParserException";
     //identifiers
     FXParser *identifier = [[FXParser regexp:@"[a-zA-Z][a-zA-Z0-9_-]*"] withTransformer:^id(NSString *name) {
         
-        FXParser *parser = parsers[name];
+        FXParser *parser = identifiers[name];
         if (!parser)
         {
             parser = [FXParser forwardDeclarationWithName:name];
-            parsers[name] = parser;
+            identifiers[name] = parser;
         }
         return parser;
     }];
@@ -591,7 +592,7 @@ NSString *const FXParserException = @"FXParserException";
     
     //regex
     FXParser *solidus = [[FXParser string:@"/"] discard];
-    FXParser *escapedSolidus = [[FXParser string:@"\\\\/"] withValue:@"/"];
+    FXParser *escapedSolidus = [[FXParser string:@"\\/"] withValue:@"/"];
     FXParser *regexPattern = [[[[escapedSolidus or:[FXParser regexp:@"[^\\/\n]"]] oneOrMoreTimes] optional] asString];
     FXParser *regexReplacement = [[[[stringEscape or:[FXParser regexp:@"[^\\/\n]"]] oneOrMoreTimes] optional] withComponentsJoinedByString:@""]; //join with "" so empty string is discarded
     FXParser *regex = [[FXParser sequence:@[solidus, regexPattern, solidus]] withTransformer:^id(NSString *pattern) {
@@ -644,6 +645,7 @@ NSString *const FXParserException = @"FXParserException";
             implementation = transformer(parser.name, implementation);
         }
         [parser setImplementation:implementation];
+        parsers[parser.name] = parser;
         return parser;
     }];
     
