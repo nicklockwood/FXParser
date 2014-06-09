@@ -1,7 +1,7 @@
 //
 //  FXParser.h
 //
-//  Version 1.2 beta
+//  Version 1.2
 //
 //  Created by Nick Lockwood on 15/01/2013.
 //  Copyright (c) 2013 Charcoal Design
@@ -51,12 +51,14 @@ typedef id (^FXParserValueTransformer)(id value);
 
 @interface FXParserResult : NSObject
 
-+ (instancetype)successWithValue:(id)value remaining:(NSRange)remaining;
-+ (instancetype)successWithChildren:(NSArray *)children remaining:(NSRange)remaining;
-+ (instancetype)failureWithChildren:(NSArray *)children expected:(NSString *)description remaining:(NSRange)remaining;
++ (instancetype)successWithValue:(id)value matched:(NSRange)matched remaining:(NSRange)remaining;
++ (instancetype)successWithValueBlock:(id (^)(void))valueBlock matched:(NSRange)matched remaining:(NSRange)remaining;
++ (instancetype)successWithChildren:(NSArray *)children matched:(NSRange)matched remaining:(NSRange)remaining;
++ (instancetype)failureWithChildren:(NSArray *)children matched:(NSRange)matched remaining:(NSRange)remaining expected:(NSString *)description;
 
 @property (nonatomic, readonly) BOOL success;
 @property (nonatomic, readonly) id value;
+@property (nonatomic, readonly) NSRange matched;
 @property (nonatomic, readonly) NSRange remaining;
 @property (nonatomic, readonly) NSArray *children;
 @property (nonatomic, readonly) NSString *expected;

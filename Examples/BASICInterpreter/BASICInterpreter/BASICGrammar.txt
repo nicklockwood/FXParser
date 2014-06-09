@@ -41,5 +41,6 @@ next                s/next//
 instruction         s/\s+//? (assignment | print | println | input | goto | for | next)
 
 #program
-line                (command | instruction | (integer /.*/)) s/\s*\n+\s*//?
+numberedLine        integer /.*/
+line                (command | instruction | numberedLine) s/\s*\n+\s*//?
 program             instruction*

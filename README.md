@@ -287,11 +287,15 @@ A boolean indicating whether parsing was successful.
     
     @property (nonatomic, readonly) id value;
     
-The value returned after parsing the input. This can be either a single value or an array of results.
+The value returned after parsing the input. This can be either a single value or an array of results. The value is calculated lazily and then cached after first access.
+    
+    @property (nonatomic, readonly) NSRange matched;
+    
+The matched range of the input string that was consumed by the parsing process. This can be useful if you want to map the result back to the input, such as when performing syntax highlighting.
     
     @property (nonatomic, readonly) NSRange remaining;
     
-The remaining range of the input string that was not consumed by the parsing process. Note that for an FXParser to succeed, it does not necessarily have to have consumed all of the available input. If you wish to treat leftover input as an error, you can either enforce this as a custom rule implemented using a custom FXParserBlock, or just check the result to see if the remaining.length > 0. 
+The remaining range of the input string that was not consumed by the parsing process. Note that for an FXParser to succeed, it does not necessarily have to have consumed all of the available input. If you wish to treat leftover input as an error, you can either enforce this as a custom rule implemented using a custom FXParserBlock, or just check the result to see if remaining.length > 0. 
     
     @property (nonatomic, readonly) NSArray *children;
     
@@ -303,19 +307,19 @@ If parsing was successful, this value will be nil. If parsing fails, this value 
     
 You can construct an FXParserResult using one of the following methods:
 
-    + (instancetype)successWithValue:(id)value remaining:(NSRange)remaining;
+    + (instancetype)successWithValue:(id)value matched:(NSRange)matched remaining:(NSRange)remaining;
     
-This is used to generate an FXParserResult that represents a successful parsing operation. The value is the resultant parsed value, the remaining range is the range of the input string that was not consumed. 
+This is used to generate an FXParserResult that represents a successful parsing operation. The value is the resultant parsed value, the matched range is the range of the input string that was consumed, and the remaining range is the range that was not consumed.
     
-    + (instancetype)successWithChildren:(NSArray *)children remaining:(NSRange)remaining;
+    + (instancetype)successWithChildren:(NSArray *)children matched:(NSRange)matched remaining:(NSRange)remaining;
     
-This is used to generate an FXParserResult that represents a successful parsing operation where an array of results has been matched (as opposed to a single value). Whilst you could return this array of results as an array of values using the `successWithValue:remaining:` method, this has two disadvantages:
+This is used to generate an FXParserResult that represents a successful parsing operation where an array of results has been matched (as opposed to a single value). Whilst you could return this array of results as an array of values using the `successWithValue:matched:remaining:` method, this has two disadvantages:
 
 1. The context of the individual results (e.g. their position within the string) is not preserved.
 
 2. Nested rules will produce nested arrays of values instead of a single concatenated array, which may be harder to work with (note that if you want nested arrays of values in the results, you can use the `asArray` value transform method to redefine an array of results as a single array-type value).
     
-    + (instancetype)failureWithChildren:(NSArray *)children expected:(NSString *)description remaining:(NSRange)remaining;
+    + (instancetype)failureWithChildren:(NSArray *)children matched:(NSRange)matched remaining:(NSRange)remaining expected:(NSString *)description;
     
 This method is used to generate an FXParserResult that represents a failed parsing operation. Any successful sub-parsing results (e.g. if the parser found 4 strings but was expecting 5) should be passed as the children parameter. For results that do not have any children, pass nil. The expected string is a description of the next value that was expected at the point when parsing failed. In most cases this is just the `[parser description]` value, but it might be the description of a child parser in the case of partial success. The remaining value will be the range of the unconsumed part of the string, which should match the input range in most cases if the children value is nil, or should match the last child's `remaining` property if not.
 
@@ -344,13 +348,9 @@ A. The simplest way is probably to create a category on FXParser that adds a new
     
     @end
     
-Q. I need to return additional information in my result, such as the range of the originally matched string, or some additional contextual metadata. How can I add additional data to the FXParserResult?
+Q. I need to return additional information in my result, such as some additional contextual metadata. How can I add additional data to the FXParserResult?
 
-A. The only real option is to subclass FXParserResult and add a new constructor that takes additional values (or make the setters for your new values public). However, if you are using a custom FXParserResult subclass you won't be able to use any of the built-in FXParser constructors, combinators or value transforms except for the `parserWithBlock:description:` designated constructor, as these will all return standard FXParserResult instances instead of your subclass.
-
-You may be able to subclass FXParser and override all the methods that use FXParserResults to make them return your subclass instead, but this is not a very future-proof solution if additional constructors or combinators are added in future.
-
-A better approach is probably to post-process the FXParserResult returned by your parser. For example, by iterating over a result and all of its children and comparing their `remaining` values to the original input range. Given the range of the original input string it should then be possible to create any additional data about the input that you require. If you have a usage scenario that this doesn't cover, file a feature request on the FXParser github page.
+A. The best approach is to post-process the FXParserResult returned by your parser using the `withTransformer:` or `parserWithBlock:` methods to replace the FXParserResult.value with a new object containing additional data. For example, by iterating over a result and all of its children and comparing their `remaining` values to the original input range. Given the range of the original input string, it should then be possible to create any additional data about the input that you require. If you have a usage scenario that this doesn't cover, file a feature request on the FXParser github page.
 
 Q. I need to implement an operator precedence system so that I can parse arithmetic logic.
 
@@ -363,10 +363,14 @@ Release Notes
 Version 1.2
 
 - Parsers now have an optional "name" property that can be used to refer to them in descriptions
-- Much improved description methods provide shorter, more readable parser descriptions for debugging
-- The -debugDescription method (used when logging parsers in the console) now includes address info for child parsers, making it easier to dig in for more information
+- Shorter, more readable parser descriptions for debugging
+- The -debugDescription method (used when logging parsers in the console) now includes memory addresses for child parsers, making it easier to dig in for more information
 - Fixed bug where grammar would return a stray rule called "s" with no implementation
-- Fixed bug where grammar would not correctly match an escaped slash in a regular expression
+- Fixed bug where grammar would not correctly match an escaped solidus (slash) in a regular expression
+- Added ability to pass a block to FXParserResult to construct values lazily
+- FXParserResult values for built-in parsers are now generated in a lazy fashion
+- FXParserResult now includes matched range as well as remainder
+- Improved performance of regular expression matching
 
 Version 1.1
 

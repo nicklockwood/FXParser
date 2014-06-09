@@ -75,7 +75,7 @@
 - (void)testReplacement
 {
     FXParser *parser = [FXParser regexp:@"D(.)g" replacement:@"C$1g"];
-    XCTAssertEqualObjects([parser parse:@"Dog"].value, @"Cog", @"Something went wrong");
+    XCTAssertEqualObjects([parser parse:@"Dogs chase cats"].value, @"Cog", @"Something went wrong");
 }
 
 - (void)testJSON
@@ -275,7 +275,7 @@
     FXParserResult *result = [grammarParser parse:grammarString];
     XCTAssertTrue(result.success, @"Something went wrong");
     XCTAssertEqual([result.value count], 1, @"Something went wrong");
-    XCTAssertEqualObjects([result.value[@"rule"] description], @"a string matching the pattern / with discarded value", @"Something went wrong");
+    XCTAssertEqualObjects([result.value[@"rule"] description], @"string matching the pattern \"/\" with discarded value", @"Something went wrong");
 }
 
 @end
