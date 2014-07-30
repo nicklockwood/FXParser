@@ -1,7 +1,7 @@
 //
 //  FXParser.m
 //
-//  Version 1.2
+//  Version 1.2.1
 //
 //  Created by Nick Lockwood on 15/01/2013.
 //  Copyright (c) 2013 Charcoal Design
@@ -147,6 +147,8 @@ NSString *const FXParserException = @"FXParserException";
 
 
 @implementation FXParser
+
+@synthesize description = _description;
 
 + (instancetype)parserWithBlock:(FXParserBlock)block description:(NSString *)description
 {

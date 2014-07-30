@@ -16,7 +16,7 @@ The primary difference between FXParser and Parcoa is that FXParser uses regular
 Supported OS & SDK Versions
 -----------------------------
 
-* Supported build target - iOS 7.1 / Mac OS 10.9 (Xcode 5.1, Apple LLVM compiler 5.1)
+* Supported build target - iOS 8.0 / Mac OS 10.9 (Xcode 6.0, Apple LLVM compiler 6.0)
 * Earliest supported deployment target - iOS 5.0 / Mac OS 10.7
 * Earliest compatible deployment target - iOS 4.3 / Mac OS 10.6
 
@@ -360,6 +360,10 @@ A. The solution here would be to subclass FXParser and add a precedence property
 Release Notes
 ---------------
 
+Version 1.2.1
+ 
+- Fixed a compatibility issue with Xcode 6
+ 
 Version 1.2
 
 - Parsers now have an optional "name" property that can be used to refer to them in descriptions
