@@ -259,18 +259,44 @@ int main(int argc, const char * aargv[])
                         if ([value isKindOfClass:[NSArray class]])
                         {
                             id a = value[0];
-                            if ([a isKindOfClass:[Variable class]])
+                            while ([a respondsToSelector:@selector(value)])
                             {
-                                a = ((Variable *)a).value;
+                                a = [a value];
                             }
-                            id b = [(Expression *)value[1] value];
-                            if ([a isKindOfClass:[NSNumber class]] && [b isKindOfClass:[NSNumber class]])
+                            if ([a isKindOfClass:[NSNumber class]])
                             {
-                                return @([a doubleValue] + [b doubleValue]);
+                                double result = [a doubleValue];
+                                for (int i = 1; i < [value count]; i++)
+                                {
+                                    id b = value[i];
+                                    while ([b respondsToSelector:@selector(value)])
+                                    {
+                                        b = [b value];
+                                    }
+                                    if ([b isKindOfClass:[NSNumber class]])
+                                    {
+                                        result += [b doubleValue];
+                                    }
+                                    else
+                                    {
+                                        return @"[error]";
+                                    }
+                                }
+                                return @(result);
                             }
-                            else
+                            else if ([a isKindOfClass:[NSString class]])
                             {
-                                return [[a description] stringByAppendingString:[b description]];
+                                NSMutableString *result = [NSMutableString stringWithString:a];
+                                for (int i = 1; i < [value count]; i++)
+                                {
+                                    id b = value[i];
+                                    while ([b respondsToSelector:@selector(value)])
+                                    {
+                                        b = [b value];
+                                    }
+                                    [result appendString:[b description]];
+                                }
+                                return [result copy];
                             }
                         }
                         return value;
@@ -282,23 +308,36 @@ int main(int argc, const char * aargv[])
                 return [parser withTransformer:^id (id value) {
                     
                     return [Expression expressionWithBlock:^id {
-                        
+                      
                         if ([value isKindOfClass:[NSArray class]])
                         {
                             id a = value[0];
-                            if ([a isKindOfClass:[Variable class]])
+                            while ([a respondsToSelector:@selector(value)])
                             {
-                                a = ((Variable *)a).value;
+                                a = [a value];
                             }
-                            id b = [(Expression *)value[1] value];
-                            if ([a isKindOfClass:[NSNumber class]] && [b isKindOfClass:[NSNumber class]])
-                            {
-                                return @([a doubleValue] - [b doubleValue]);
-                            }
-                            else
+                            if (![a isKindOfClass:[NSNumber class]])
                             {
                                 return @"[error]";
                             }
+                            double result = [a doubleValue];
+                            for (int i = 1; i < [value count]; i++)
+                            {
+                                id b = value[i];
+                                while ([b respondsToSelector:@selector(value)])
+                                {
+                                    b = [b value];
+                                }
+                                if ([b isKindOfClass:[NSNumber class]])
+                                {
+                                    result -= [b doubleValue];
+                                }
+                                else
+                                {
+                                    return @"[error]";
+                                }
+                            }
+                            return @(result);
                         }
                         return value;
                     }];
@@ -309,23 +348,36 @@ int main(int argc, const char * aargv[])
                 return [parser withTransformer:^id (id value) {
                     
                     return [Expression expressionWithBlock:^id {
-                        
+                      
                         if ([value isKindOfClass:[NSArray class]])
                         {
                             id a = value[0];
-                            if ([a isKindOfClass:[Variable class]])
+                            while ([a respondsToSelector:@selector(value)])
                             {
-                                a = ((Variable *)a).value;
+                                a = [a value];
                             }
-                            id b = [(Expression *)value[1] value];
-                            if ([a isKindOfClass:[NSNumber class]] && [b isKindOfClass:[NSNumber class]])
-                            {
-                                return @([a doubleValue] * [b doubleValue]);
-                            }
-                            else
+                            if (![a isKindOfClass:[NSNumber class]])
                             {
                                 return @"[error]";
                             }
+                            double result = [a doubleValue];
+                            for (int i = 1; i < [value count]; i++)
+                            {
+                                id b = value[i];
+                                while ([b respondsToSelector:@selector(value)])
+                                {
+                                    b = [b value];
+                                }
+                                if ([b isKindOfClass:[NSNumber class]])
+                                {
+                                    result *= [b doubleValue];
+                                }
+                                else
+                                {
+                                    return @"[error]";
+                                }
+                            }
+                            return @(result);
                         }
                         return value;
                     }];
@@ -334,26 +386,49 @@ int main(int argc, const char * aargv[])
             else if ([name isEqualToString:@"division"])
             {
                 return [parser withTransformer:^id (id value) {
-                    
+                  
                     return [Expression expressionWithBlock:^id {
-                        
+                      
                         if ([value isKindOfClass:[NSArray class]])
                         {
                             id a = value[0];
-                            if ([a isKindOfClass:[Variable class]])
+                            while ([a respondsToSelector:@selector(value)])
                             {
-                                a = ((Variable *)a).value;
+                                a = [a value];
                             }
-                            id b = [(Expression *)value[1] value];
-                            if ([a isKindOfClass:[NSNumber class]] && [b isKindOfClass:[NSNumber class]])
-                            {
-                                return @([a doubleValue] / [b doubleValue]);
-                            }
-                            else
+                            if (![a isKindOfClass:[NSNumber class]])
                             {
                                 return @"[error]";
                             }
+                            double result = [a doubleValue];
+                            for (int i = 1; i < [value count]; i++)
+                            {
+                                id b = value[i];
+                                while ([b respondsToSelector:@selector(value)])
+                                {
+                                    b = [b value];
+                                }
+                                if ([b isKindOfClass:[NSNumber class]])
+                                {
+                                    result /= [b doubleValue];
+                                }
+                                else
+                                {
+                                    return @"[error]";
+                                }
+                            }
+                            return @(result);
                         }
+                        return value;
+                    }];
+                }];
+            }
+            else if ([name isEqualToString:@"expression"])
+            {
+                return [parser withTransformer:^id (id value) {
+                
+                    return [Expression expressionWithBlock:^id {
+                  
                         return value;
                     }];
                 }];
@@ -361,7 +436,7 @@ int main(int argc, const char * aargv[])
             else if ([name isEqualToString:@"assignment"])
             {
                 return [parser withTransformer:^id(NSArray *values) {
-                    
+                  
                     return [Statement statementWithBlock:^{
                         
                         ((Variable *)values[0]).value = [(Expression *)values[1] value];
