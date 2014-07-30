@@ -250,6 +250,29 @@ int main(int argc, const char * aargv[])
                     return [Variable variableWithName:name];
                 }];
             }
+            else if ([name isEqualToString:@"factor"])
+            {
+                return [parser withTransformer:^id(id value) {
+                    
+                    if ([value isKindOfClass:[NSArray class]])
+                    {
+                        id a = value[1];
+                        while ([a respondsToSelector:@selector(value)])
+                        {
+                            a = [a value];
+                        }
+                        if ([a isKindOfClass:[NSNumber class]])
+                        {
+                            return @( - [a doubleValue]);
+                        }
+                        else
+                        {
+                            return @"[error]";
+                        }
+                    }
+                    return value;
+                }];
+            }
             else if ([name isEqualToString:@"addition"])
             {
                 return [parser withTransformer:^id (id value) {

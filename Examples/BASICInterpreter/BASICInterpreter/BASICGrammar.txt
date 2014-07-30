@@ -17,7 +17,7 @@ string              quote (escape | /[^"]/)* quote
 literal             number | string
 identifier          /[a-zA-Z][a-zA-Z0-9_]*/
 subexpression       s/\s*\(\s*// expression s/\s*\)\s*//
-factor              literal | identifier | subexpression
+factor              ("-" s/\s*//)? literal | identifier | subexpression
 multiplication      factor (s/\s*\*\s*// factor)*
 division            factor (s/\s*\/\s*// factor)*
 term                multiplication | division
